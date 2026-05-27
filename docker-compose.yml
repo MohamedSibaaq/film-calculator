@@ -1,0 +1,11 @@
+services:
+  film-calculator:
+    build: .
+    ports:
+      - "5000:5000"
+    # Mount config.yaml so edits take effect without rebuilding the image
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - PORT=5000
+    restart: unless-stopped

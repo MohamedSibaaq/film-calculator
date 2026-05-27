@@ -1,532 +1,887 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Film Cost Per Exposure Calculator</title>
+  <title>Film Cost Calculator</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..400&display=swap');
+
+    :root {
+      --bg:           #0d1117;
+      --bg-card:      #161b22;
+      --bg-input:     #0d1117;
+      --border:       rgba(240,246,252,0.08);
+      --border-hover: rgba(240,246,252,0.18);
+      --accent:       #e6a817;
+      --accent-dim:   rgba(230,168,23,0.12);
+      --accent-hover: #f5bc30;
+      --teal:         #22d3ee;
+      --green:        #4ade80;
+      --green-dim:    rgba(74,222,128,0.12);
+      --red:          #f87171;
+      --text:         #e6edf3;
+      --text-2:       #8b949e;
+      --text-3:       #484f58;
+      --radius:       8px;
+      --radius-sm:    5px;
+      --ease:         180ms ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f5f5f5;
-      color: #333;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .reset-form {
-      display: block;
-      margin: 15px auto 0 auto;
-      background-color: #e53935;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      font-size: 0.9rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    }
-
-    .reset-form:hover {
-      background-color: #e0e0e0;
-    }
-
-    .reset-form:active {
-      background-color: #d6d6d6;
-      transform: scale(0.97);
-    }
-
-    .reset-btn {
-      display: block;
-      margin: 0 auto 30px auto;
-      background-color: #e53935;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      font-size: 1rem;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .reset-btn:hover {
-      background-color: #c62828;
-    }
-
-    .container {
+    /* ── HEADER ─────────────────────────────────────────────── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 20px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
 
-    .film-form {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      padding: 20px;
-      width: 300px;
-      cursor: grab;
-      user-select: none;
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
     }
 
-    .film-form.dragging {
-      opacity: 0.5;
-      cursor: grabbing;
+    .header-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
     }
 
-    .film-form input[type="text"],
-    .film-form input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      box-sizing: border-box;
-      margin-top: 5px;
+    .header-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
     }
 
-    .film-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      text-align: center;
-      border: none;
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
+    /* ── BUTTONS ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
       background: transparent;
-      margin-bottom: 10px;
-      width: 100%;
-      text-align: center;
-    }
-
-    .film-title:focus {
-      outline: 2px solid #007acc;
-      background-color: #eef7ff;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-    }
-
-    .film-format {
-      width: 100%;
-      padding: 10px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background-color: #fff;
-      color: #333;
-      margin-top: 5px;
-      appearance: none;
-      /* remove default arrow */
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg fill='%23666' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-      background-size: 16px;
+      color: var(--text-2);
       cursor: pointer;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: background var(--ease), border-color var(--ease), color var(--ease);
+      white-space: nowrap;
+      line-height: 1;
+      height: 32px;
+    }
+    .btn:hover { background: rgba(255,255,255,0.05); color: var(--text); border-color: var(--border-hover); }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #000; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+    .btn-ghost-danger { color: var(--red); border-color: rgba(248,113,113,0.2); }
+    .btn-ghost-danger:hover { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.4); color: var(--red); }
+
+    /* ── MAIN ────────────────────────────────────────────────── */
+    .main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
     }
 
-    .film-format:hover {
-      border-color: #999;
+    .page-heading { margin-bottom: 28px; }
+    .page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
     }
+    .page-desc { font-size: 0.85rem; color: var(--text-2); }
 
-    .film-format:focus {
-      outline: none;
-      border-color: #007acc;
-      box-shadow: 0 0 4px rgba(0, 122, 204, 0.4);
-    }
-
-
-    .result {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #2a7a2a;
-    }
-
-    .footer {
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
+    .toolbar {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.95rem;
-      color: #555;
-      font-family: 'Segoe UI', sans-serif;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .toolbar-spacer { flex: 1; }
+
+    /* ── CARD GRID ───────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+      gap: 14px;
+      margin-bottom: 36px;
     }
 
-    .github-link {
+    /* ── FILM CARD ───────────────────────────────────────────── */
+    .film-form {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      cursor: grab;
+      transition: border-color var(--ease), box-shadow var(--ease);
+      position: relative;
+    }
+    .film-form::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      box-shadow: 0 0 0 0 transparent;
+      transition: box-shadow var(--ease);
+      pointer-events: none;
+    }
+    .film-form:hover { border-color: var(--border-hover); }
+    .film-form:hover::after { box-shadow: 0 4px 20px rgba(0,0,0,0.35); }
+    .film-form.dragging { opacity: 0.4; cursor: grabbing; transform: scale(0.97); }
+
+    /* Card header */
+    .card-header {
       display: flex;
       align-items: center;
-      text-decoration: none;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
     }
-
-    .github-icon {
-      width: 24px;
-      height: 24px;
-      fill: #333;
-      transition: fill 0.2s ease;
+    .film-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: inherit;
+      padding: 0;
     }
+    .film-title:focus { outline: none; }
 
-    .github-link:hover .github-icon {
-      fill: #007acc;
+    .btn-icon {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 12px;
+      transition: background var(--ease), color var(--ease), border-color var(--ease);
+      padding: 0;
+      flex-shrink: 0;
     }
+    .btn-icon:hover { background: rgba(255,255,255,0.06); color: var(--text-2); border-color: var(--border); }
+    .btn-icon.btn-del:hover { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
 
-    .footer-text {
-      font-size: 1.2rem;
-    }
-
-    .footer-text a {
-      color: #444;
+    /* Form fields */
+    .field { margin-bottom: 10px; }
+    .field-label {
+      display: block;
+      font-size: 0.68rem;
       font-weight: 500;
-      transition: color 0.2s ease;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 4px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 0.86rem;
+      font-family: inherit;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      appearance: none;
+      transition: border-color var(--ease), background var(--ease);
+    }
+    .field-input::placeholder { color: var(--text-3); }
+    .field-input:focus { outline: none; border-color: var(--accent); background: rgba(230,168,23,0.03); }
+    .field-input[type="number"] { -moz-appearance: textfield; }
+    .field-input[type="number"]::-webkit-inner-spin-button,
+    .field-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    select.field-input {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%238b949e' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 28px;
+    }
+    select.field-input option { background: #1c2128; }
+
+    /* Film type badge */
+    .stock-meta { min-height: 20px; margin-top: 4px; }
+    .stock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.67rem;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 100px;
+      letter-spacing: 0.03em;
+    }
+    .badge-color { background: rgba(96,165,250,0.14); color: #60a5fa; }
+    .badge-bw    { background: rgba(148,163,184,0.14); color: #94a3b8; }
+    .badge-slide { background: rgba(167,139,250,0.14); color: #a78bfa; }
+
+    /* Result panel */
+    .result-panel {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .result-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+    .result-row + .result-row { margin-top: 6px; }
+    .result-lbl { color: var(--text-2); }
+    .result-val {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+    .result-val.small { font-size: 0.8rem; color: var(--text-2); font-weight: 500; }
+
+    .btn-reset-roll { width: 100%; margin-top: 10px; font-size: 0.76rem; height: 28px; }
+
+    /* ── COMPARISON ──────────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+    }
+    .section-line { flex: 1; height: 1px; background: var(--border); }
+
+    .comparison-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    table.cmp {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    .cmp th {
+      padding: 9px 14px;
+      font-size: 0.68rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-3);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      text-align: left;
+    }
+    .cmp td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(240,246,252,0.04);
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+    }
+    .cmp tbody tr:last-child td { border-bottom: none; }
+    .cmp td.name { color: var(--text); font-weight: 500; }
+    .cmp td.cost-val { color: var(--accent); font-weight: 600; }
+    .cmp tr.row-best td { background: rgba(230,168,23,0.05); }
+    .cmp tr.row-best td.cost-val { color: var(--green); }
+    .badge-best {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 600;
+      background: var(--green-dim);
+      color: var(--green);
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
     }
 
-    .footer-text a:hover {
-      color: #007acc;
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.78rem;
+      color: var(--text-3);
+    }
+    .footer-credits { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .footer-credits a { color: var(--text-2); text-decoration: none; transition: color var(--ease); }
+    .footer-credits a:hover { color: var(--accent); }
+    .footer-credits .dot { color: var(--text-3); }
+    .footer-links { display: flex; gap: 6px; }
+    .gh-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-2);
+      text-decoration: none;
+      font-size: 0.76rem;
+      transition: background var(--ease), border-color var(--ease), color var(--ease);
+    }
+    .gh-link:hover { background: rgba(255,255,255,0.05); border-color: var(--border-hover); color: var(--text); }
+    .gh-icon { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── LOADING ─────────────────────────────────────────────── */
+    .loader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: grid;
+      place-items: center;
+      z-index: 200;
+      transition: opacity 0.25s;
+    }
+    .loader.out { opacity: 0; pointer-events: none; }
+    .loader-ring {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .main { padding: 20px 14px 48px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .page-title { font-size: 1.25rem; }
+      .site-footer { flex-direction: column; }
     }
   </style>
 </head>
-
 <body>
 
-  <h2>Film Roll Cost Per Exposure Calculator</h2>
-  <button class="reset-btn">Reset All</button>
+<div class="loader" id="loader"><div class="loader-ring"></div></div>
 
-  <div class="container" id="container">
-    <!-- Film Roll Forms -->
-    <div class="film-form" data-roll="0" draggable="true">
-      <input type="text" class="film-title" value="Roll 1" />
-      <label>Film Price:</label>
-      <input type="text" class="film-price" placeholder="e.g. 12.50" />
-      <label>Number of Exposures:</label>
-      <input type="number" class="exposures" placeholder="e.g. 36" />
-      <label>Dev/Scan Price:</label>
-      <input type="text" class="dev-price" placeholder="e.g. 5.75" />
-      <label>Film Format:</label>
-      <select class="film-format">
-        <option value="35mm" selected>35mm</option>
-        <option value="120">120</option>
-      </select>
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-brand">
+    <div class="header-icon">🎞</div>
+    <span class="header-name">Film Cost Calculator</span>
+  </div>
+  <div class="header-right">
+    <a id="hdrGhLink" href="#" target="_blank" rel="noopener" class="gh-link">
+      <svg class="gh-icon" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
 
-      <div class="result">Cost per exposure: <span class="cost">0</span></div>
-    </div>
-
-    <div class="film-form" data-roll="1" draggable="true">
-      <input type="text" class="film-title" value="Roll 2" />
-      <label>Film Price:</label>
-      <input type="text" class="film-price" />
-      <label>Number of Exposures:</label>
-      <input type="number" class="exposures" />
-      <label>Dev/Scan Price:</label>
-      <input type="text" class="dev-price" />
-      <label>Film Format:</label>
-      <select class="film-format">
-        <option value="35mm" selected>35mm</option>
-        <option value="120">120</option>
-      </select>
-
-      <div class="result">Cost per exposure: <span class="cost">0</span></div>
-    </div>
-
-    <div class="film-form" data-roll="2" draggable="true">
-      <input type="text" class="film-title" value="Roll 3" />
-      <label>Film Price:</label>
-      <input type="text" class="film-price" />
-      <label>Number of Exposures:</label>
-      <input type="number" class="exposures" />
-      <label>Dev/Scan Price:</label>
-      <input type="text" class="dev-price" />
-      <label>Film Format:</label>
-      <select class="film-format">
-        <option value="35mm" selected>35mm</option>
-        <option value="35mm (half-frame)">35mm (half-frame)</option>
-        <option value="120 (6x4.5)">120 (6x4.5)</option>
-        <option value="120 (6x6)">120 (6x6)</option>
-        <option value="120 (6x7)">120 (6x7)</option>
-        <option value="120 (6x8)">120 (6x8)</option>
-        <option value="120 (6x9)">120 (6x9)</option>
-      </select>
-      <div class="result">
-        Cost per exposure: <span class="cost">0.00</span><br>
-        Cost per sq.mm: <span class="cost-sqmm">0.000000</span>
-      </div>
-    </div>
+<!-- MAIN -->
+<main class="main">
+  <div class="page-heading">
+    <h1 class="page-title">Film Roll Cost Calculator</h1>
+    <p class="page-desc">Compare cost per exposure across multiple analog film rolls.</p>
   </div>
 
-  <footer class="footer">
+  <div class="toolbar">
+    <button class="btn btn-primary" id="addRollBtn">+ Add Roll</button>
+    <button class="btn btn-ghost-danger" id="resetAllBtn">Reset All</button>
+    <div class="toolbar-spacer"></div>
+  </div>
 
-    <a href="https://github.com/andikaraditya/film-calculator" target="_blank" class="github-link" aria-label="GitHub">
-      <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 50 50">
-        <path
-          d="M17.791,46.836C18.502,46.53,19,45.823,19,45v-5.4c0-0.197,0.016-0.402,0.041-0.61C19.027,38.994,19.014,38.997,19,39 c0,0-3,0-3.6,0c-1.5,0-2.8-0.6-3.4-1.8c-0.7-1.3-1-3.5-2.8-4.7C8.9,32.3,9.1,32,9.7,32c0.6,0.1,1.9,0.9,2.7,2c0.9,1.1,1.8,2,3.4,2 c2.487,0,3.82-0.125,4.622-0.555C21.356,34.056,22.649,33,24,33v-0.025c-5.668-0.182-9.289-2.066-10.975-4.975 c-3.665,0.042-6.856,0.405-8.677,0.707c-0.058-0.327-0.108-0.656-0.151-0.987c1.797-0.296,4.843-0.647,8.345-0.714 c-0.112-0.276-0.209-0.559-0.291-0.849c-3.511-0.178-6.541-0.039-8.187,0.097c-0.02-0.332-0.047-0.663-0.051-0.999 c1.649-0.135,4.597-0.27,8.018-0.111c-0.079-0.5-0.13-1.011-0.13-1.543c0-1.7,0.6-3.5,1.7-5c-0.5-1.7-1.2-5.3,0.2-6.6 c2.7,0,4.6,1.3,5.5,2.1C21,13.4,22.9,13,25,13s4,0.4,5.6,1.1c0.9-0.8,2.8-2.1,5.5-2.1c1.5,1.4,0.7,5,0.2,6.6c1.1,1.5,1.7,3.2,1.6,5 c0,0.484-0.045,0.951-0.11,1.409c3.499-0.172,6.527-0.034,8.204,0.102c-0.002,0.337-0.033,0.666-0.051,0.999 c-1.671-0.138-4.775-0.28-8.359-0.089c-0.089,0.336-0.197,0.663-0.325,0.98c3.546,0.046,6.665,0.389,8.548,0.689 c-0.043,0.332-0.093,0.661-0.151,0.987c-1.912-0.306-5.171-0.664-8.879-0.682C35.112,30.873,31.557,32.75,26,32.969V33 c2.6,0,5,3.9,5,6.6V45c0,0.823,0.498,1.53,1.209,1.836C41.37,43.804,48,35.164,48,25C48,12.318,37.683,2,25,2S2,12.318,2,25 C2,35.164,8.63,43.804,17.791,46.836z">
-        </path>
-      </svg>
+  <div class="cards-grid" id="container"></div>
+
+  <div id="comparisonSection" style="display:none">
+    <div class="section-header">
+      <span class="section-title">Comparison</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="comparison-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>Roll</th>
+            <th>Stock</th>
+            <th>Format</th>
+            <th>Exposures</th>
+            <th>Cost / Exposure</th>
+            <th>Cost / sq.mm</th>
+          </tr>
+        </thead>
+        <tbody id="cmpBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-credits">
+    <span>Forked from</span>
+    <a id="origLink" href="#" target="_blank" rel="noopener">andikaraditya</a>
+    <span class="dot">·</span>
+    <span>Enhanced by</span>
+    <a id="forkLink" href="#" target="_blank" rel="noopener">MohamedSibaaq</a>
+  </div>
+  <div class="footer-links">
+    <a id="origRepoLink" href="#" target="_blank" rel="noopener" class="gh-link">
+      <svg class="gh-icon" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      Original
     </a>
-    <span class="footer-text">made by <a href="https://github.com/andikaraditya"
-        target="_blank">andikaraditya</a></span>
+    <a id="forkRepoLink" href="#" target="_blank" rel="noopener" class="gh-link">
+      <svg class="gh-icon" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      This Fork
+    </a>
+  </div>
+</footer>
 
-  </footer>
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'filmCalc_v3';
+let cfg = null;
+let debouncer = null;
 
-  <script>
-    const STORAGE_KEY = 'filmRollData';
-    let debounceTimer;
+const FALLBACK = {
+  site: {
+    title: 'Film Cost Calculator',
+    original_author: 'andikaraditya',
+    original_repo: 'https://github.com/andikaraditya/film-calculator',
+    fork_author: 'MohamedSibaaq',
+    fork_repo: 'https://github.com/MohamedSibaaq/film-calculator',
+  },
+  app: { max_rolls: 10, default_rolls: 2 },
+  film_formats: [
+    { label: '35mm',              value: '35mm',      area_sqmm: 864    },
+    { label: '35mm (Half-Frame)', value: '35mm_half', area_sqmm: 432    },
+    { label: '120 - 6x4.5',      value: '120_645',   area_sqmm: 2700   },
+    { label: '120 - 6x6',        value: '120_66',    area_sqmm: 3600   },
+    { label: '120 - 6x7',        value: '120_67',    area_sqmm: 4200   },
+    { label: '120 - 6x8',        value: '120_68',    area_sqmm: 4800   },
+    { label: '120 - 6x9',        value: '120_69',    area_sqmm: 5400   },
+    { label: '4x5 in',           value: '4x5',       area_sqmm: 121920 },
+    { label: '8x10 in',          value: '8x10',      area_sqmm: 491520 },
+  ],
+  film_brands: [],
+};
 
-    function formatWithCommas(value) {
-      if (isNaN(value)) return "";
-      return Number(value).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
+// ── Config load ───────────────────────────────────────────────────────────────
+async function loadCfg() {
+  try {
+    const r = await fetch('/api/config');
+    if (!r.ok) throw new Error(r.status);
+    cfg = await r.json();
+  } catch (e) {
+    console.warn('/api/config unavailable, using fallback.', e);
+    cfg = FALLBACK;
+  }
+}
 
-    function parseFormattedNumber(value) {
-      return parseFloat(value.replace(/,/g, '')) || 0;
-    }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function parseNum(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+function fmt2(n)     { return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function debounceSave() {
+  clearTimeout(debouncer);
+  debouncer = setTimeout(saveAll, 350);
+}
+function getArea(val) {
+  return (cfg.film_formats.find(f => f.value === val) || {}).area_sqmm || 864;
+}
+function getFormatLabel(val) {
+  return (cfg.film_formats.find(f => f.value === val) || {}).label || val;
+}
 
-    function calculateCost(form) {
-      const filmInput = form.querySelector('.film-price');
-      const devInput = form.querySelector('.dev-price');
-      const exposuresInput = form.querySelector('.exposures');
-      const formatSelect = form.querySelector('.film-format');
-      const resultExposure = form.querySelector('.cost');
-      const resultSqmm = form.querySelector('.cost-sqmm');
+// ── Build option HTML ─────────────────────────────────────────────────────────
+function fmtOptions(sel) {
+  return cfg.film_formats.map(f =>
+    `<option value="${esc(f.value)}"${f.value===sel?' selected':''}>${esc(f.label)}</option>`
+  ).join('');
+}
+function brandOptions(sel) {
+  const opts = (cfg.film_brands||[]).map(b =>
+    `<option value="${esc(b.brand)}"${b.brand===sel?' selected':''}>${esc(b.brand)}</option>`
+  ).join('');
+  return `<option value="">Select brand...</option>${opts}`;
+}
+function stockOptions(brand, sel) {
+  const b = (cfg.film_brands||[]).find(x => x.brand === brand);
+  if (!b) return '<option value="">Select brand first...</option>';
+  const opts = b.films.map(f =>
+    `<option value="${esc(f.name)}" data-iso="${f.iso}" data-type="${esc(f.type)}"${f.name===sel?' selected':''}>${esc(f.name)} (ISO ${f.iso})</option>`
+  ).join('');
+  return `<option value="">Select stock...</option>${opts}`;
+}
 
-      const filmPrice = parseFormattedNumber(filmInput.value);
-      const devPrice = parseFormattedNumber(devInput.value);
-      const exposures = parseInt(exposuresInput.value) || 0;
-      const format = formatSelect ? formatSelect.value : "35mm";
+// ── Badge ────────────────────────────────────────────────────────────────────
+function updateBadge(form) {
+  const sel   = form.querySelector('.film-stock');
+  const el    = form.querySelector('.stock-meta');
+  const opt   = sel.options[sel.selectedIndex];
+  const type  = opt && opt.dataset.type;
+  const iso   = opt && opt.dataset.iso;
+  if (!type || !iso || !opt.value) { el.innerHTML=''; return; }
+  const cls   = {color:'badge-color',bw:'badge-bw',slide:'badge-slide'}[type]||'badge-bw';
+  const lbl   = {color:'Color',bw:'B&W',slide:'Slide'}[type]||type;
+  el.innerHTML = `<span class="stock-badge ${cls}">${lbl} · ISO ${esc(iso)}</span>`;
+}
 
-      const total = filmPrice + devPrice;
-      const costPerExposure = exposures > 0 ? (total / exposures) : 0;
+// ── Calculate ─────────────────────────────────────────────────────────────────
+function calcForm(form) {
+  const film = parseNum(form.querySelector('.film-price').value);
+  const dev  = parseNum(form.querySelector('.dev-price').value);
+  const exp  = parseInt(form.querySelector('.exposures').value)||0;
+  const fmt  = form.querySelector('.film-format').value;
+  const total = film + dev;
+  const perExp  = exp>0 ? total/exp : null;
+  const perSqmm = exp>0 ? total/(exp*getArea(fmt)) : null;
+  form.querySelector('.cost').textContent       = perExp   != null ? `$${fmt2(perExp)}`     : '—';
+  form.querySelector('.cost-sqmm').textContent  = perSqmm  != null ? `$${perSqmm.toFixed(6)}` : '—';
+}
 
-      const area = getFormatArea(format);
-      const costPerSqmm = exposures > 0 ? (total / (exposures * area)) : 0;
+// ── Create card ───────────────────────────────────────────────────────────────
+function getCurrentCount() { return document.querySelectorAll('.film-form').length; }
 
-      resultExposure.textContent = formatWithCommas(costPerExposure.toFixed(2));
-      resultSqmm.textContent = costPerSqmm.toFixed(6);
-    }
+function createCard(idx, data={}) {
+  const div = document.createElement('div');
+  div.className = 'film-form';
+  div.dataset.roll = idx;
+  div.draggable = true;
 
-    function getFormatArea(format) {
-      switch (format) {
-        case "35mm":
-          return 864
-          break;
-        case "35mm (half-frame)":
-          return 432
-          break;
-        case "120 (6x4.5)":
-          return 2700
-          break;
-        case "120 (6x6)":
-          return 3600
-          break;
-        case "120 (6x7)":
-          return 4200
-          break;
-        case "120 (6x8)":
-          return 4800
-          break;
-        case "120 (6x9)":
-          return 5400
-          break;
-        default:
-          return 864
-          break;
-      }
+  const showDel = getCurrentCount() > 0; // will be gated by updateDelBtns after
 
-    }
+  div.innerHTML = `
+    <div class="card-header">
+      <input type="text" class="film-title" value="${esc(data.title||`Roll ${idx+1}`)}">
+      <div class="card-actions">
+        ${showDel?'<button type="button" class="btn-icon btn-del" title="Delete roll">✕</button>':''}
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Brand</label>
+      <select class="field-input film-brand">${brandOptions(data.brand||'')}</select>
+    </div>
+    <div class="field">
+      <label class="field-label">Film Stock</label>
+      <select class="field-input film-stock">${stockOptions(data.brand||'',data.stock||'')}</select>
+      <div class="stock-meta"></div>
+    </div>
+    <div class="field">
+      <label class="field-label">Film Format</label>
+      <select class="field-input film-format">${fmtOptions(data.format||cfg.film_formats[0].value)}</select>
+    </div>
+    <div class="field">
+      <label class="field-label">Film Price</label>
+      <input type="text" class="field-input film-price" placeholder="e.g. 12.50" value="${esc(data.film||'')}">
+    </div>
+    <div class="field">
+      <label class="field-label">Dev / Scan Price</label>
+      <input type="text" class="field-input dev-price" placeholder="e.g. 5.75" value="${esc(data.dev||'')}">
+    </div>
+    <div class="field">
+      <label class="field-label">Exposures</label>
+      <input type="number" class="field-input exposures" placeholder="e.g. 36" min="1" value="${esc(data.exposures||'')}">
+    </div>
+    <div class="result-panel">
+      <div class="result-row">
+        <span class="result-lbl">Cost / exposure</span>
+        <span class="result-val cost">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-lbl">Cost / sq.mm</span>
+        <span class="result-val small cost-sqmm">—</span>
+      </div>
+    </div>
+    <button type="button" class="btn btn-reset-roll">Reset Roll</button>
+  `;
 
-    function saveAllForms() {
-      const forms = document.querySelectorAll('.film-form');
-      const data = [];
+  // Brand → stock cascade
+  const brandSel = div.querySelector('.film-brand');
+  const stockSel = div.querySelector('.film-stock');
+  brandSel.addEventListener('change', () => {
+    stockSel.innerHTML = stockOptions(brandSel.value, '');
+    updateBadge(div); calcForm(div); debounceSave(); updateComparison();
+  });
+  stockSel.addEventListener('change', () => { updateBadge(div); calcForm(div); debounceSave(); updateComparison(); });
 
-      forms.forEach((form) => {
-        data.push({
-          title: form.querySelector('.film-title').value,
-          film: form.querySelector('.film-price').value,
-          dev: form.querySelector('.dev-price').value,
-          exposures: form.querySelector('.exposures').value,
-          format: form.querySelector('.film-format').value
-        });
-      });
+  updateBadge(div);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
-    function debounceSave() {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(saveAllForms, 500);
-    }
-
-    function loadFromStorage() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return;
-
-      const data = JSON.parse(stored);
-      const container = document.getElementById('container');
-      container.innerHTML = ''; // Clear existing forms
-
-      data.forEach((roll, i) => {
-        const form = createForm(i, roll);
-        container.appendChild(form);
-      });
-
-      // Re-bind inputs & drag events after load
-      document.querySelectorAll('.film-form').forEach(handleInput);
-      enableDragAndDrop();
-    }
-
-    function createForm(index, data = {}) {
-      // Create a div and fill with inner HTML for a form
-      const div = document.createElement('div');
-      div.classList.add('film-form');
-      div.setAttribute('data-roll', index);
-      div.setAttribute('draggable', 'true');
-
-      div.innerHTML = `
-        <input type="text" class="film-title" value="${data.title || `Roll ${index + 1}`}" />
-        <label>Film Price:</label>
-        <input type="text" class="film-price" placeholder="e.g. 12.50" value="${data.film || ''}" />
-        <label>Number of Exposures:</label>
-        <input type="number" class="exposures" placeholder="e.g. 36" value="${data.exposures || ''}" />
-        <label>Dev/Scan Price:</label>
-        <input type="text" class="dev-price" placeholder="e.g. 5.75" value="${data.dev || ''}" />
-        <label>Film Format:</label>
-        <select class="film-format">
-          <option value="35mm" ${data.format === "35mm" || !data.format ? "selected" : ""}>35mm</option>
-          <option value="35mm (half-frame)" ${data.format === "35mm (half-frame)" ? "selected" : ""}>35mm (half-frame)</option>
-          <option value="120 (6x4.5)" ${data.format === "120 (6x4.5)" ? "selected" : ""}>120 (6x4.5)</option>
-          <option value="120 (6x6)" ${data.format === "120 (6x6)" ? "selected" : ""}>120 (6x6)</option>
-          <option value="120 (6x7)" ${data.format === "120 (6x7)" ? "selected" : ""}>120 (6x7)</option>
-          <option value="120 (6x8)" ${data.format === "120 (6x8)" ? "selected" : ""}>120 (6x8)</option>
-          <option value="120 (6x9)" ${data.format === "120 (6x9)" ? "selected" : ""}>120 (6x9)</option>
-        </select>
-        <div class="result">
-          Cost per exposure: <span class="cost">0.00</span><br>
-          Cost per sq.mm: <span class="cost-sqmm">0.000000</span>
-        </div>
-        <button type="button" class="reset-form">Reset This Roll</button>`;
-
-      calculateCost(div);
-      handleInput(div);
-      handleResetButton(div, index);
-      return div;
-    }
-
-    function handleResetButton(form, index) {
-      const resetBtn = form.querySelector('.reset-form');
-      resetBtn.addEventListener('click', () => {
-        if (confirm(`Reset only Roll ${index + 1}?`)) {
-          form.querySelector('.film-title').value = `Roll ${index + 1}`;
-          form.querySelector('.film-price').value = "";
-          form.querySelector('.exposures').value = "";
-          form.querySelector('.dev-price').value = "";
-          calculateCost(form);
-          saveAllForms();
-        }
-      });
-    }
-
-    function handleInput(form) {
-      const filmInput = form.querySelector('.film-price');
-      const devInput = form.querySelector('.dev-price');
-      const exposuresInput = form.querySelector('.exposures');
-      const titleInput = form.querySelector('.film-title');
-      const formatSelect = form.querySelector('.film-format');
-
-      const recalcAndSave = () => {
-        calculateCost(form);
-        debounceSave();
-      };
-
-      [filmInput, devInput].forEach(input => {
-        input.addEventListener('blur', () => {
-          const num = parseFormattedNumber(input.value);
-          input.value = formatWithCommas(num);  // keep 2 decimals, no rounding to int
-          recalcAndSave();
-        });
-
-        input.addEventListener('input', recalcAndSave);
-      });
-
-      exposuresInput.addEventListener('input', recalcAndSave);
-      formatSelect.addEventListener('change', recalcAndSave);
-      titleInput.addEventListener('input', debounceSave);
-    }
-
-    // Drag and Drop Logic
-    function enableDragAndDrop() {
-      const container = document.getElementById('container');
-      let draggedElem = null;
-
-      container.querySelectorAll('.film-form').forEach(form => {
-        form.addEventListener('dragstart', (e) => {
-          draggedElem = form;
-          form.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-
-        form.addEventListener('dragend', () => {
-          draggedElem = null;
-          container.querySelectorAll('.film-form').forEach(f => f.classList.remove('dragging'));
-          saveAllForms(); // Save order after drag end
-        });
-
-        form.addEventListener('dragover', (e) => {
-          e.preventDefault();
-
-          const target = e.target.closest('.film-form');
-          if (!target || target === draggedElem) return;
-
-          const rect = target.getBoundingClientRect();
-          const next = (e.clientY - rect.top) > (rect.height / 2);
-
-          if (next) {
-            container.insertBefore(draggedElem, target.nextSibling);
-          } else {
-            container.insertBefore(draggedElem, target);
-          }
-        });
-      });
-    }
-
-    // Reset button
-    document.querySelector('.reset-btn').addEventListener('click', () => {
-      if (confirm("Reset all fields and clear saved data?")) {
-        localStorage.removeItem(STORAGE_KEY);
-        const container = document.getElementById('container');
-        container.innerHTML = '';
-        // Create fresh 3 forms
-        for (let i = 0; i < 3; i++) {
-          const form = createForm(i);
-          container.appendChild(form);
-        }
-        enableDragAndDrop();
-      }
+  // Other inputs
+  const recalc = () => { calcForm(div); debounceSave(); updateComparison(); };
+  div.querySelector('.film-format').addEventListener('change', recalc);
+  div.querySelector('.exposures').addEventListener('input', recalc);
+  ['.film-price','.dev-price'].forEach(sel => {
+    const inp = div.querySelector(sel);
+    inp.addEventListener('input', recalc);
+    inp.addEventListener('blur', () => {
+      const n = parseNum(inp.value);
+      if (inp.value && !isNaN(n)) inp.value = fmt2(n);
+      recalc();
     });
+  });
+  div.querySelector('.film-title').addEventListener('input', () => { debounceSave(); updateComparison(); });
 
-    // Initial load
-    if (localStorage.getItem(STORAGE_KEY)) {
-      loadFromStorage();
-    } else {
-      enableDragAndDrop();
-      document.querySelectorAll('.film-form').forEach(form => {
-        calculateCost(form);
-        handleInput(form);
-      });
+  // Delete
+  const delBtn = div.querySelector('.btn-del');
+  if (delBtn) wireDelBtn(div, delBtn);
+
+  // Reset roll
+  div.querySelector('.btn-reset-roll').addEventListener('click', () => {
+    const rollIdx = div.dataset.roll;
+    if (!confirm(`Reset Roll ${+rollIdx+1}?`)) return;
+    div.querySelector('.film-title').value = `Roll ${+rollIdx+1}`;
+    div.querySelector('.film-price').value = '';
+    div.querySelector('.dev-price').value  = '';
+    div.querySelector('.exposures').value  = '';
+    div.querySelector('.film-brand').value = '';
+    stockSel.innerHTML = stockOptions('', '');
+    div.querySelector('.stock-meta').innerHTML = '';
+    div.querySelector('.film-format').value = cfg.film_formats[0].value;
+    calcForm(div); saveAll(); updateComparison();
+  });
+
+  calcForm(div);
+  return div;
+}
+
+function wireDelBtn(form, btn) {
+  btn.addEventListener('click', () => {
+    const t = form.querySelector('.film-title').value;
+    if (!confirm(`Delete "${t}"?`)) return;
+    form.remove();
+    updateAddBtn(); updateDelBtns(); renumber(); saveAll(); initDrag(); updateComparison();
+  });
+}
+
+// ── Delete btn visibility ─────────────────────────────────────────────────────
+function updateDelBtns() {
+  const forms = [...document.querySelectorAll('.film-form')];
+  forms.forEach(f => {
+    let btn = f.querySelector('.btn-del');
+    const actions = f.querySelector('.card-actions');
+    if (forms.length > 1 && !btn) {
+      btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn-icon btn-del'; btn.title = 'Delete roll'; btn.textContent = '✕';
+      actions.appendChild(btn);
+      wireDelBtn(f, btn);
+    } else if (forms.length <= 1 && btn) {
+      btn.remove();
     }
-  </script>
-</body>
+  });
+}
 
+function updateAddBtn() {
+  const btn = document.getElementById('addRollBtn');
+  const n = getCurrentCount(), max = cfg.app.max_rolls;
+  btn.disabled = n >= max;
+  btn.textContent = n >= max ? 'Max Rolls Reached' : '+ Add Roll';
+}
+
+function renumber() {
+  document.querySelectorAll('.film-form').forEach((f,i) => {
+    f.dataset.roll = i;
+    const t = f.querySelector('.film-title');
+    if (/^Roll \d+$/.test(t.value)) t.value = `Roll ${i+1}`;
+  });
+}
+
+// ── Comparison table ──────────────────────────────────────────────────────────
+function updateComparison() {
+  const forms = [...document.querySelectorAll('.film-form')];
+  const sec = document.getElementById('comparisonSection');
+  if (forms.length < 2) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+
+  const rows = forms.map(f => {
+    const film = parseNum(f.querySelector('.film-price').value);
+    const dev  = parseNum(f.querySelector('.dev-price').value);
+    const exp  = parseInt(f.querySelector('.exposures').value)||0;
+    const fmt  = f.querySelector('.film-format').value;
+    const area = getArea(fmt);
+    const total = film + dev;
+    return {
+      title:  f.querySelector('.film-title').value,
+      stock:  f.querySelector('.film-stock').value || '—',
+      fmt:    getFormatLabel(fmt),
+      exp,
+      perExp:  exp>0 ? total/exp : null,
+      perSqmm: exp>0 ? total/(exp*area) : null,
+    };
+  });
+
+  const valid = rows.filter(r => r.perExp != null).map(r => r.perExp);
+  const min   = valid.length ? Math.min(...valid) : null;
+
+  document.getElementById('cmpBody').innerHTML = rows.map(r => {
+    const best = r.perExp != null && r.perExp === min && valid.length > 1;
+    return `<tr class="${best?'row-best':''}">
+      <td class="name">${esc(r.title)}${best?'<span class="badge-best">Best</span>':''}</td>
+      <td>${esc(r.stock)}</td>
+      <td>${esc(r.fmt)}</td>
+      <td>${r.exp||'—'}</td>
+      <td class="cost-val">${r.perExp!=null?'$'+fmt2(r.perExp):'—'}</td>
+      <td>${r.perSqmm!=null?'$'+r.perSqmm.toFixed(6):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Storage ───────────────────────────────────────────────────────────────────
+function saveAll() {
+  const data = [...document.querySelectorAll('.film-form')].map(f => ({
+    title:     f.querySelector('.film-title').value,
+    film:      f.querySelector('.film-price').value,
+    dev:       f.querySelector('.dev-price').value,
+    exposures: f.querySelector('.exposures').value,
+    format:    f.querySelector('.film-format').value,
+    brand:     f.querySelector('.film-brand').value,
+    stock:     f.querySelector('.film-stock').value,
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function loadFromStorage() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    const container = document.getElementById('container');
+    container.innerHTML = '';
+    const n = Math.min(data.length, cfg.app.max_rolls);
+    for (let i=0; i<n; i++) container.appendChild(createCard(i, data[i]));
+    return true;
+  } catch { return false; }
+}
+
+// ── Drag and drop ─────────────────────────────────────────────────────────────
+function initDrag() {
+  const container = document.getElementById('container');
+  let dragged = null;
+  container.querySelectorAll('.film-form').forEach(f => {
+    if (f._drag) return;
+    f._drag = true;
+    f.addEventListener('dragstart', e => { dragged=f; f.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    f.addEventListener('dragend', () => { dragged=null; container.querySelectorAll('.film-form').forEach(x=>x.classList.remove('dragging')); saveAll(); updateComparison(); });
+    f.addEventListener('dragover', e => {
+      e.preventDefault();
+      const t = e.target.closest('.film-form');
+      if (!t||t===dragged) return;
+      const after = e.clientY - t.getBoundingClientRect().top > t.getBoundingClientRect().height/2;
+      container.insertBefore(dragged, after ? t.nextSibling : t);
+    });
+  });
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  await loadCfg();
+
+  // Apply site metadata
+  const site = cfg.site || {};
+  document.title = site.title || 'Film Cost Calculator';
+  document.querySelector('.page-title').textContent = site.title || 'Film Roll Cost Calculator';
+
+  const set = (id, href, txt) => {
+    const el = document.getElementById(id);
+    if (el) { if (href) el.href = href; if (txt) el.textContent = txt; }
+  };
+  set('hdrGhLink',   site.fork_repo, null);
+  set('origLink',    `https://github.com/${site.original_author||'andikaraditya'}`, site.original_author||'andikaraditya');
+  set('forkLink',    `https://github.com/${site.fork_author||'MohamedSibaaq'}`, site.fork_author||'MohamedSibaaq');
+  set('origRepoLink', site.original_repo, null);
+  set('forkRepoLink', site.fork_repo, null);
+
+  const container = document.getElementById('container');
+  if (!loadFromStorage()) {
+    const n = cfg.app.default_rolls || 2;
+    for (let i=0; i<n; i++) container.appendChild(createCard(i));
+  }
+
+  updateAddBtn(); updateDelBtns(); initDrag(); updateComparison();
+
+  document.getElementById('addRollBtn').addEventListener('click', () => {
+    const n = getCurrentCount();
+    if (n >= cfg.app.max_rolls) return;
+    container.appendChild(createCard(n));
+    updateAddBtn(); updateDelBtns(); initDrag(); saveAll(); updateComparison();
+  });
+
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    if (!confirm('Reset all rolls and clear saved data?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    container.innerHTML = '';
+    const n = cfg.app.default_rolls || 2;
+    for (let i=0; i<n; i++) container.appendChild(createCard(i));
+    updateAddBtn(); updateDelBtns(); initDrag(); updateComparison();
+  });
+
+  // Hide loader
+  const ldr = document.getElementById('loader');
+  ldr.classList.add('out');
+  setTimeout(() => ldr.remove(), 300);
+}
+
+boot();
+</script>
+</body>
 </html>

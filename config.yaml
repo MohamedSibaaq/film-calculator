@@ -1,0 +1,78 @@
+﻿# Film Cost Calculator - Configuration
+# This file is the single source of truth for all app data.
+# Edit this file to add/remove film formats, brands, or stocks.
+
+site:
+  title: "Film Cost Calculator"
+  description: "Calculate cost per exposure and per sq. mm for analog film rolls"
+  original_author: "andikaraditya"
+  original_repo: "https://github.com/andikaraditya/film-calculator"
+  fork_author: "MohamedSibaaq"
+  fork_repo: "https://github.com/MohamedSibaaq/film-calculator"
+
+app:
+  max_rolls: 10
+  default_rolls: 2
+
+# Film formats - value must be unique; area_sqmm is the exposure area in square millimetres
+film_formats:
+  - { label: "35mm",              value: "35mm",      area_sqmm: 864    }
+  - { label: "35mm (Half-Frame)", value: "35mm_half", area_sqmm: 432    }
+  - { label: "120 - 6x4.5",      value: "120_645",   area_sqmm: 2700   }
+  - { label: "120 - 6x6",        value: "120_66",    area_sqmm: 3600   }
+  - { label: "120 - 6x7",        value: "120_67",    area_sqmm: 4200   }
+  - { label: "120 - 6x8",        value: "120_68",    area_sqmm: 4800   }
+  - { label: "120 - 6x9",        value: "120_69",    area_sqmm: 5400   }
+  - { label: "4x5 in",           value: "4x5",       area_sqmm: 121920 }
+  - { label: "8x10 in",          value: "8x10",      area_sqmm: 491520 }
+
+# Film brands and their available stocks
+# type: color | bw | slide
+film_brands:
+  - brand: "Kodak"
+    films:
+      - { name: "Portra 160",    iso: 160,  type: color }
+      - { name: "Portra 400",    iso: 400,  type: color }
+      - { name: "Portra 800",    iso: 800,  type: color }
+      - { name: "Ektar 100",     iso: 100,  type: color }
+      - { name: "Gold 200",      iso: 200,  type: color }
+      - { name: "ColorPlus 200", iso: 200,  type: color }
+      - { name: "UltraMax 400",  iso: 400,  type: color }
+      - { name: "Tri-X 400",     iso: 400,  type: bw    }
+      - { name: "T-Max 100",     iso: 100,  type: bw    }
+      - { name: "T-Max 400",     iso: 400,  type: bw    }
+      - { name: "T-Max P3200",   iso: 3200, type: bw    }
+
+  - brand: "Fujifilm"
+    films:
+      - { name: "Fujicolor C200",    iso: 200, type: color }
+      - { name: "Superia X-TRA 400", iso: 400, type: color }
+      - { name: "Pro 160NS",         iso: 160, type: color }
+      - { name: "Pro 400H",          iso: 400, type: color }
+      - { name: "Velvia 50",         iso: 50,  type: slide }
+      - { name: "Velvia 100",        iso: 100, type: slide }
+      - { name: "Provia 100F",       iso: 100, type: slide }
+      - { name: "Acros 100 II",      iso: 100, type: bw   }
+
+  - brand: "Ilford"
+    films:
+      - { name: "HP5 Plus 400",  iso: 400,  type: bw    }
+      - { name: "FP4 Plus 125",  iso: 125,  type: bw    }
+      - { name: "Delta 100",     iso: 100,  type: bw    }
+      - { name: "Delta 400",     iso: 400,  type: bw    }
+      - { name: "Delta 3200",    iso: 3200, type: bw    }
+      - { name: "XP2 Super 400", iso: 400,  type: color }
+      - { name: "SFX 200",       iso: 200,  type: bw    }
+
+  - brand: "Lomography"
+    films:
+      - { name: "Color Negative 100", iso: 100, type: color }
+      - { name: "Color Negative 400", iso: 400, type: color }
+      - { name: "Lady Grey 400",      iso: 400, type: bw    }
+      - { name: "Berlin Kino 400",    iso: 400, type: bw    }
+      - { name: "Earl Grey 100",      iso: 100, type: bw    }
+
+  - brand: "CineStill"
+    films:
+      - { name: "50D",  iso: 50,  type: color }
+      - { name: "800T", iso: 800, type: color }
