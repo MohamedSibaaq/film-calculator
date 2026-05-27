@@ -129,6 +129,14 @@ docker compose up -d --force-recreate nginx
 0 3 * * * certbot renew --quiet && docker compose -f /opt/film-calculator/docker-compose.yml restart nginx
 ```
 
+## Roadmap
+
+- Integrate an exchange-rate API to fetch and cache up-to-date conversion rates.
+- Auto-detect user geography and set a sensible default display currency.
+- Add manual currency controls so users can change currency at any time.
+- Let users set and persist a preferred primary currency across sessions.
+- Show roll totals and comparison values converted into the preferred currency.
+
 ## Demo
 
 ![screenshot](assets/demo_screenshot.jpeg)
