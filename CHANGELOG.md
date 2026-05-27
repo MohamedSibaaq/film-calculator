@@ -21,6 +21,36 @@ The format is inspired by Keep a Changelog and this project follows semantic-sty
 - Add richer metadata in `config.yaml` (film latitude, process notes, expiration notes).
 - Add basic analytics-friendly event hooks (privacy-preserving, self-hostable option).
 
+## [2026-05-27b] - UX Features, Privacy, and Film Catalog Expansion
+
+### Added
+- Per-roll Expired Film toggle with badge and comparison table column.
+- Privacy consent modal shown on first load with Essential Only and Reject Non-Essential options.
+- Dedicated `privacy.html` page covering tracking, cookies, local storage, data collection, and user choices.
+- Privacy Policy link in the main page footer.
+- Light/dark theme toggle button in the header and privacy page; preference persisted in `localStorage`.
+- `[data-theme="light"]` CSS overrides for the full UI color scheme.
+- CDN brand logo rendering via Clearbit for all supported brands, with brand-initials fallback on load error.
+- Brand column added to comparison table with inline logo and brand name.
+- `BRAND_DOMAINS` map in `index.html` for all 11 supported film brands.
+- Film catalog expanded: Kentmere, Foma, ADOX, ORWO, Rollei, Harman brands added.
+- Additional stocks added to Kodak (Ektachrome E100, Pro Image 100, Double-X 5222, Panatomic-X), Fujifilm (Sensia 100), Ilford (Pan F Plus 50), and Lomography (LomoChrome variants).
+- `CHANGELOG.md` and `suggestions.md` created for release notes and AI-suggested improvements.
+- `suggestions.md` added to `.gitignore` as a local-only planning file.
+
+### Changed
+- Removed Google Fonts CDN import to avoid third-party font requests; system font stack used instead.
+- `select` option backgrounds now use CSS variables for correct light/dark rendering.
+- Card result panel and comparison table header backgrounds switched to `var(--bg-subtle)` variable.
+- Reset Roll now clears the Expired Film flag.
+- Privacy policy updated to disclose external CDN requests made when brand logos are displayed.
+
+### Security
+- `referrerpolicy="no-referrer"` set on all CDN logo images.
+- Third-party font CDN dependency removed to reduce external request surface.
+
+---
+
 ## [2026-05-27] - Production and UX Upgrade
 
 ### Added

@@ -141,7 +141,6 @@ docker compose up -d --force-recreate nginx
 
 ![screenshot](assets/demo_screenshot.jpeg)
 
-![demo](assets/demo.gif)
 
 ## Credits
 

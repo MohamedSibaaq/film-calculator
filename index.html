@@ -821,15 +821,16 @@ function brandOptions(sel) {
   const opts = (cfg.film_brands||[]).map(b =>
     `<option value="${esc(b.brand)}"${b.brand===sel?' selected':''}>${esc(b.brand)}</option>`
   ).join('');
-  return `<option value="">Select brand...</option>${opts}`;
+  return `<option value="">Select brand...</option>${opts}<option value="__custom__"${sel==='__custom__'?' selected':''}>Custom (type own)…</option>`;
 }
 function stockOptions(brand, sel) {
+  if (brand === '__custom__') return `<option value="__custom__"${sel==='__custom__'?' selected':''}>Custom (type own)…</option>`;
   const b = (cfg.film_brands||[]).find(x => x.brand === brand);
   if (!b) return '<option value="">Select brand first...</option>';
   const opts = b.films.map(f =>
     `<option value="${esc(f.name)}" data-iso="${f.iso}" data-type="${esc(f.type)}"${f.name===sel?' selected':''}>${esc(f.name)} (ISO ${f.iso})</option>`
   ).join('');
-  return `<option value="">Select stock...</option>${opts}`;
+  return `<option value="">Select stock...</option>${opts}<option value="__custom__"${sel==='__custom__'?' selected':''}>Custom (type own)…</option>`;
 }
 
 // ── Badge ────────────────────────────────────────────────────────────────────
@@ -846,7 +847,7 @@ function updateBadge(form) {
 }
 
 function updateBrandMeta(form) {
-  const brand = form.querySelector('.film-brand').value;
+  const brand = getEffectiveBrand(form);
   const meta = form.querySelector('.brand-meta');
   if (!meta) return;
   if (!brand) {
@@ -889,6 +890,26 @@ function renderBrandCell(brand) {
   return `<span class="brand-inline"><img class="brand-logo-table" src="${esc(logoUrl)}" alt="${safeBrand} logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid';"><span class="brand-fallback-table" style="display:none">${initials}</span><span>${safeBrand}</span></span>`;
 }
 
+// ── Custom brand/stock helpers ────────────────────────────────────────────────
+function getEffectiveBrand(form) {
+  const sel = form.querySelector('.film-brand');
+  if (sel.value === '__custom__') return form.querySelector('.brand-custom-input').value.trim();
+  return sel.value;
+}
+function getEffectiveStock(form) {
+  const sel = form.querySelector('.film-stock');
+  if (sel.value === '__custom__') return form.querySelector('.stock-custom-input').value.trim();
+  return sel.value;
+}
+function syncCustomInputs(form) {
+  const brandSel   = form.querySelector('.film-brand');
+  const brandInput = form.querySelector('.brand-custom-input');
+  const stockSel   = form.querySelector('.film-stock');
+  const stockInput = form.querySelector('.stock-custom-input');
+  brandInput.style.display = brandSel.value === '__custom__' ? 'block' : 'none';
+  stockInput.style.display = stockSel.value === '__custom__' ? 'block' : 'none';
+}
+
 // ── Calculate ─────────────────────────────────────────────────────────────────
 function calcForm(form) {
   const film = parseNum(form.querySelector('.film-price').value);
@@ -923,11 +944,13 @@ function createCard(idx, data={}) {
     <div class="field">
       <label class="field-label">Brand</label>
       <select class="field-input film-brand">${brandOptions(data.brand||'')}</select>
+      <input type="text" class="field-input brand-custom-input" placeholder="Type brand name…" style="display:none" value="${esc(data.brandCustom||'')}">
       <div class="brand-meta"></div>
     </div>
     <div class="field">
       <label class="field-label">Film Stock</label>
       <select class="field-input film-stock">${stockOptions(data.brand||'',data.stock||'')}</select>
+      <input type="text" class="field-input stock-custom-input" placeholder="Type stock name…" style="display:none" value="${esc(data.stockCustom||'')}">
       <div class="stock-meta"></div>
     </div>
     <div class="field">
@@ -968,13 +991,26 @@ function createCard(idx, data={}) {
   const stockSel = div.querySelector('.film-stock');
   brandSel.addEventListener('change', () => {
     stockSel.innerHTML = stockOptions(brandSel.value, '');
+    syncCustomInputs(div);
+    if (brandSel.value === '__custom__') div.querySelector('.brand-custom-input').focus();
     updateBrandMeta(div);
     updateBadge(div); calcForm(div); debounceSave(); updateComparison();
   });
-  stockSel.addEventListener('change', () => { updateBadge(div); calcForm(div); debounceSave(); updateComparison(); });
+  stockSel.addEventListener('change', () => {
+    syncCustomInputs(div);
+    if (stockSel.value === '__custom__') div.querySelector('.stock-custom-input').focus();
+    updateBadge(div); calcForm(div); debounceSave(); updateComparison();
+  });
+  div.querySelector('.brand-custom-input').addEventListener('input', () => {
+    updateBrandMeta(div); debounceSave(); updateComparison();
+  });
+  div.querySelector('.stock-custom-input').addEventListener('input', () => {
+    debounceSave(); updateComparison();
+  });
 
   updateBadge(div);
   updateBrandMeta(div);
+  syncCustomInputs(div);
 
   // Other inputs
   const recalc = () => { calcForm(div); debounceSave(); updateComparison(); };
@@ -1006,6 +1042,9 @@ function createCard(idx, data={}) {
     div.querySelector('.exposures').value  = '';
     div.querySelector('.film-brand').value = '';
     stockSel.innerHTML = stockOptions('', '');
+    div.querySelector('.brand-custom-input').value = '';
+    div.querySelector('.stock-custom-input').value = '';
+    syncCustomInputs(div);
     updateBrandMeta(div);
     div.querySelector('.stock-meta').innerHTML = '';
     div.querySelector('.film-format').value = cfg.film_formats[0].value;
@@ -1074,8 +1113,8 @@ function updateComparison() {
     const total = film + dev;
     return {
       title:  f.querySelector('.film-title').value,
-      brand:  f.querySelector('.film-brand').value || '—',
-      stock:  f.querySelector('.film-stock').value || '—',
+      brand:  getEffectiveBrand(f) || '—',
+      stock:  getEffectiveStock(f) || '—',
       expired: f.querySelector('.expired-flag').checked,
       fmt:    getFormatLabel(fmt),
       exp,
@@ -1110,9 +1149,11 @@ function saveAll() {
     dev:       f.querySelector('.dev-price').value,
     exposures: f.querySelector('.exposures').value,
     format:    f.querySelector('.film-format').value,
-    brand:     f.querySelector('.film-brand').value,
-    stock:     f.querySelector('.film-stock').value,
-    expired:   f.querySelector('.expired-flag').checked,
+    brand:       f.querySelector('.film-brand').value,
+    stock:       f.querySelector('.film-stock').value,
+    brandCustom: f.querySelector('.brand-custom-input').value,
+    stockCustom: f.querySelector('.stock-custom-input').value,
+    expired:     f.querySelector('.expired-flag').checked,
   }));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }

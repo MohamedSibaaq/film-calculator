@@ -1,0 +1,49 @@
+# robots.txt — Film Cost Calculator
+# https://filmcalculator.tahlil.solutions/robots.txt
+
+# ── Block all other bots by default ──────────────────────────────────────────
+User-agent: *
+Disallow: /
+
+# ── Google ────────────────────────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Googlebot-Video
+Allow: /
+
+# ── Bing / Microsoft ──────────────────────────────────────────────────────────
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
+User-agent: MSNBot
+Allow: /
+Disallow: /api/
+
+# ── Yahoo ─────────────────────────────────────────────────────────────────────
+User-agent: Slurp
+Allow: /
+Disallow: /api/
+
+# ── DuckDuckGo ────────────────────────────────────────────────────────────────
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+
+# ── Yandex ────────────────────────────────────────────────────────────────────
+User-agent: YandexBot
+Allow: /
+Disallow: /api/
+
+# ── Baidu ─────────────────────────────────────────────────────────────────────
+User-agent: Baiduspider
+Allow: /
+Disallow: /api/
+
+# ── Sitemap ───────────────────────────────────────────────────────────────────
+Sitemap: https://filmcalculator.tahlil.solutions/sitemap.xml
