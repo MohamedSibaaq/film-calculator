@@ -1,11 +1,40 @@
 services:
   film-calculator:
     build: .
-    ports:
-      - "5000:5000"
-    # Mount config.yaml so edits take effect without rebuilding the image
+    # No host port — only reachable by nginx over the internal network
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-    environment:
-      - PORT=5000
+    env_file: .env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/\")' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+      # Uncomment after placing SSL certs in nginx/certs/
+      # - ./nginx/certs:/etc/nginx/certs:ro
+    # Substitute ${DOMAIN} from .env into the config before nginx starts.
+    # $${DOMAIN} escapes docker-compose interpolation so the shell receives $DOMAIN.
+    command: sh -c "envsubst '$${DOMAIN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    depends_on:
+      film-calculator:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

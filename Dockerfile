@@ -20,5 +20,9 @@ USER appuser
 
 EXPOSE 5000
 
+# Health check used by docker-compose depends_on
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/')" || exit 1
+
 # gunicorn for a production-ready WSGI server
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "30", "app:app"]

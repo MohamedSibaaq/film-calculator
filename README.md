@@ -45,19 +45,89 @@ film_formats:
   - { label: "6x17 Panoramic", value: "617", area_sqmm: 10200 }
 ```
 
-## Local development
-
-The app fetches `config.yaml` at runtime, so it must be served over HTTP (not opened as a file):
+## Running locally
 
 ```bash
-# Python
-python -m http.server 8080
-
-# Node.js
-npx serve .
+docker compose up --build
 ```
 
-Then open `http://localhost:8080`.
+Open `http://localhost` — nginx proxies to Flask on the internal network; port 5000 is never exposed to the host.
+
+Edit `config.yaml` and refresh; the volume mount means no rebuild is needed.
+
+## Cloud deployment
+
+### 1 — Copy files to your server
+
+```bash
+rsync -av --exclude='.git' ./ user@<ip-address>:/opt/film-calculator/
+```
+
+### 2 — Open firewall ports
+
+```bash
+# ufw (Ubuntu/Debian)
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+### 3 — Deploy
+
+```bash
+ssh user@<ip-address>
+cd /opt/film-calculator
+docker compose up -d --build
+```
+
+The app is now live at `http://<your-website-url>`.
+
+---
+
+### 4 — Add a domain + HTTPS (Let's Encrypt)
+
+**Get a certificate** (run once on the host — stop nginx first so port 80 is free):
+
+```bash
+docker compose stop nginx
+sudo apt install certbot          # or: snap install --classic certbot
+sudo certbot certonly --standalone -d 'your-website-url'
+docker compose start nginx
+```
+
+Certbot writes certs to `/etc/letsencrypt/live/your-website-url/`.
+
+**Wire the certs into nginx:**
+
+Create `nginx/certs/` and symlink (or copy) the files:
+
+```bash
+mkdir -p nginx/certs
+sudo ln -sf /etc/letsencrypt/live/your-website-url/fullchain.pem  nginx/certs/fullchain.pem
+sudo ln -sf /etc/letsencrypt/live/your-website-url/privkey.pem    nginx/certs/privkey.pem
+```
+
+**Edit [`nginx/nginx.conf`](nginx/nginx.conf):**
+
+1. In the `server` block on port 80, replace the two `location` blocks with:
+   ```nginx
+   return 301 https://$host$request_uri;
+   ```
+2. Uncomment the entire `# ── HTTPS ──` server block — `${DOMAIN}` is already set; it will be substituted from `.env` at startup
+
+**Uncomment the certs volume** in [`docker-compose.yml`](docker-compose.yml):
+```yaml
+      - ./nginx/certs:/etc/nginx/certs:ro
+```
+
+**Redeploy:**
+```bash
+docker compose up -d --force-recreate nginx
+```
+
+**Auto-renew** (add to root crontab):
+```
+0 3 * * * certbot renew --quiet && docker compose -f /opt/film-calculator/docker-compose.yml restart nginx
+```
 
 ## Demo
 
