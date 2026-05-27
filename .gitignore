@@ -6,6 +6,9 @@
 # SSL certificates — private keys must never be committed
 nginx/certs/
 
+# Generated nginx config (built from nginx.conf.template — contains real domain)
+nginx/nginx.conf
+
 # Certbot output
 certbot/
 

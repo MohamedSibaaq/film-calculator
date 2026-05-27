@@ -79,7 +79,7 @@ cd /opt/film-calculator
 docker compose up -d --build
 ```
 
-The app is now live at `http://<your-website-url>`.
+The app is now live at `https://filmcalculator.tahlil.solutions/`.
 
 ---
 
@@ -130,6 +130,8 @@ docker compose up -d --force-recreate nginx
 ```
 
 ## Demo
+
+![screenshot](assets/demo_screenshot.jpeg)
 
 ![demo](assets/demo.gif)
 
