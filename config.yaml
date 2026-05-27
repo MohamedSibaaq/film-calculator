@@ -35,27 +35,35 @@ film_brands:
       - { name: "Portra 400",    iso: 400,  type: color }
       - { name: "Portra 800",    iso: 800,  type: color }
       - { name: "Ektar 100",     iso: 100,  type: color }
+      - { name: "Ektachrome E100", iso: 100, type: slide }
       - { name: "Gold 200",      iso: 200,  type: color }
       - { name: "ColorPlus 200", iso: 200,  type: color }
       - { name: "UltraMax 400",  iso: 400,  type: color }
+      - { name: "Pro Image 100", iso: 100,  type: color }
       - { name: "Tri-X 400",     iso: 400,  type: bw    }
+      - { name: "Double-X 5222", iso: 250,  type: bw    }
+      - { name: "Panatomic-X",   iso: 32,   type: bw    }
       - { name: "T-Max 100",     iso: 100,  type: bw    }
       - { name: "T-Max 400",     iso: 400,  type: bw    }
       - { name: "T-Max P3200",   iso: 3200, type: bw    }
 
   - brand: "Fujifilm"
     films:
+      - { name: "Fujicolor 100",     iso: 100, type: color }
       - { name: "Fujicolor C200",    iso: 200, type: color }
+      - { name: "Fujicolor 200",     iso: 200, type: color }
       - { name: "Superia X-TRA 400", iso: 400, type: color }
       - { name: "Pro 160NS",         iso: 160, type: color }
       - { name: "Pro 400H",          iso: 400, type: color }
       - { name: "Velvia 50",         iso: 50,  type: slide }
       - { name: "Velvia 100",        iso: 100, type: slide }
       - { name: "Provia 100F",       iso: 100, type: slide }
+      - { name: "Sensia 100",        iso: 100, type: slide }
       - { name: "Acros 100 II",      iso: 100, type: bw   }
 
   - brand: "Ilford"
     films:
+      - { name: "Pan F Plus 50", iso: 50,   type: bw    }
       - { name: "HP5 Plus 400",  iso: 400,  type: bw    }
       - { name: "FP4 Plus 125",  iso: 125,  type: bw    }
       - { name: "Delta 100",     iso: 100,  type: bw    }
@@ -66,8 +74,12 @@ film_brands:
 
   - brand: "Lomography"
     films:
+      - { name: "LomoChrome Color '92", iso: 400, type: color }
+      - { name: "LomoChrome Metropolis", iso: 100, type: color }
       - { name: "Color Negative 100", iso: 100, type: color }
       - { name: "Color Negative 400", iso: 400, type: color }
+      - { name: "Color Negative 800", iso: 800, type: color }
+      - { name: "LomoChrome Purple",  iso: 100, type: color }
       - { name: "Lady Grey 400",      iso: 400, type: bw    }
       - { name: "Berlin Kino 400",    iso: 400, type: bw    }
       - { name: "Earl Grey 100",      iso: 100, type: bw    }
@@ -76,3 +88,37 @@ film_brands:
     films:
       - { name: "50D",  iso: 50,  type: color }
       - { name: "800T", iso: 800, type: color }
+
+  - brand: "Kentmere"
+    films:
+      - { name: "Kentmere Pan 100", iso: 100, type: bw }
+      - { name: "Kentmere Pan 400", iso: 400, type: bw }
+
+  - brand: "Foma"
+    films:
+      - { name: "Fomapan 100 Classic", iso: 100, type: bw }
+      - { name: "Fomapan 200 Creative", iso: 200, type: bw }
+      - { name: "Fomapan 400 Action", iso: 400, type: bw }
+
+  - brand: "ADOX"
+    films:
+      - { name: "CHS 100 II", iso: 100, type: bw }
+      - { name: "HR-50", iso: 50, type: bw }
+      - { name: "Scala 50", iso: 50, type: slide }
+
+  - brand: "ORWO"
+    films:
+      - { name: "Wolfen NC500", iso: 400, type: color }
+      - { name: "UN54", iso: 100, type: bw }
+      - { name: "N74+", iso: 400, type: bw }
+
+  - brand: "Rollei"
+    films:
+      - { name: "RPX 25", iso: 25, type: bw }
+      - { name: "RPX 100", iso: 100, type: bw }
+      - { name: "RPX 400", iso: 400, type: bw }
+      - { name: "Retro 80S", iso: 80, type: bw }
+
+  - brand: "Harman"
+    films:
+      - { name: "Phoenix 200", iso: 200, type: color }
