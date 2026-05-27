@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | Film Cost Calculator</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --header-bg: rgba(13,17,23,0.92);
+      --border: rgba(240,246,252,0.08);
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #e6a817;
+      --radius: 10px;
+    }
+
+    [data-theme="light"] {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --header-bg: rgba(247,248,251,0.92);
+      --border: rgba(15,23,42,0.12);
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #b77900;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 28px 16px 40px;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      max-width: 900px;
+      margin: 0 auto 12px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+
+    h1, h2 {
+      margin: 0 0 10px;
+      letter-spacing: -0.01em;
+    }
+
+    h1 { font-size: 1.5rem; }
+    h2 {
+      font-size: 1rem;
+      margin-top: 18px;
+      color: var(--accent);
+    }
+
+    p, li {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    ul { padding-left: 18px; }
+
+    a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--muted);
+    }
+
+    .top-links {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .meta {
+      margin-top: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button type="button" id="themeToggleBtn" class="btn" aria-label="Toggle theme">Light Mode</button>
+  </div>
+  <main class="wrap">
+    <section class="card">
+      <h1>Privacy Policy</h1>
+      <p class="meta">Effective date: 2026-05-27</p>
+      <p>
+        Film Cost Calculator is designed to run with no advertising trackers and no user profiling.
+        This page explains what is stored and why.
+      </p>
+
+      <h2>1. Tracking and Analytics</h2>
+      <ul>
+        <li>No third-party analytics scripts are used.</li>
+        <li>No advertising or behavioral tracking tools are used.</li>
+        <li>No fingerprinting features are intentionally implemented.</li>
+      </ul>
+
+      <h2>2. Cookies and Local Storage</h2>
+      <ul>
+        <li>This app does not require non-essential cookies.</li>
+        <li>Calculator entries and UI state are stored in your browser local storage so your data persists between visits.</li>
+        <li>Your privacy consent preference is stored locally in your browser.</li>
+      </ul>
+
+      <h2>3. Data Collection</h2>
+      <ul>
+        <li>No account is required.</li>
+        <li>No personal data is intentionally collected by the app itself.</li>
+        <li>When brand logos are displayed, your browser may request image assets from a logo CDN (`logo.clearbit.com`).</li>
+        <li>Typical server logs may exist at the infrastructure level (for security and uptime), managed by the site operator.</li>
+      </ul>
+
+      <h2>4. Your Choices</h2>
+      <ul>
+        <li>You can clear local storage at any time in your browser settings.</li>
+        <li>You can reject non-essential cookies in the consent prompt (none are used by default).</li>
+      </ul>
+
+      <h2>5. Contact</h2>
+      <p>
+        For policy questions, contact the site maintainer via the project repository.
+      </p>
+
+      <div class="top-links">
+        <a class="btn" href="index.html">Back to Calculator</a>
+        <a class="btn" href="README.md">Project README</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const THEME_KEY = 'filmCalc_theme_v1';
+
+    function setTheme(mode) {
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem(THEME_KEY, mode);
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = mode === 'light' ? 'Dark Mode' : 'Light Mode';
+    }
+
+    function initThemeToggle() {
+      const saved = localStorage.getItem(THEME_KEY) || 'dark';
+      setTheme(saved === 'light' ? 'light' : 'dark');
+      const btn = document.getElementById('themeToggleBtn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+    }
+
+    initThemeToggle();
+  </script>
+</body>
+</html>

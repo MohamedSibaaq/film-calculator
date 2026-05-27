@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Film Cost Calculator</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..400&display=swap');
-
     :root {
       --bg:           #0d1117;
       --bg-card:      #161b22;
       --bg-input:     #0d1117;
+      --bg-subtle:    rgba(255,255,255,0.02);
+      --header-bg:    rgba(13,17,23,0.92);
       --border:       rgba(240,246,252,0.08);
       --border-hover: rgba(240,246,252,0.18);
       --accent:       #e6a817;
@@ -28,12 +28,32 @@
       --ease:         180ms ease;
     }
 
+    [data-theme="light"] {
+      --bg:           #f7f8fb;
+      --bg-card:      #ffffff;
+      --bg-input:     #ffffff;
+      --bg-subtle:    rgba(15,23,42,0.04);
+      --header-bg:    rgba(247,248,251,0.92);
+      --border:       rgba(15,23,42,0.12);
+      --border-hover: rgba(15,23,42,0.24);
+      --accent:       #b77900;
+      --accent-dim:   rgba(183,121,0,0.10);
+      --accent-hover: #8f5f00;
+      --teal:         #0f766e;
+      --green:        #15803d;
+      --green-dim:    rgba(21,128,61,0.10);
+      --red:          #b91c1c;
+      --text:         #0f172a;
+      --text-2:       #475569;
+      --text-3:       #64748b;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -45,7 +65,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(13,17,23,0.92);
+      background: var(--header-bg);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       padding: 0 24px;
@@ -102,7 +122,7 @@
       line-height: 1;
       height: 32px;
     }
-    .btn:hover { background: rgba(255,255,255,0.05); color: var(--text); border-color: var(--border-hover); }
+    .btn:hover { background: var(--bg-subtle); color: var(--text); border-color: var(--border-hover); }
 
     .btn-primary {
       background: var(--accent);
@@ -209,7 +229,7 @@
       padding: 0;
       flex-shrink: 0;
     }
-    .btn-icon:hover { background: rgba(255,255,255,0.06); color: var(--text-2); border-color: var(--border); }
+    .btn-icon:hover { background: var(--bg-subtle); color: var(--text-2); border-color: var(--border); }
     .btn-icon.btn-del:hover { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
 
     /* Form fields */
@@ -248,7 +268,7 @@
       background-position: right 8px center;
       padding-right: 28px;
     }
-    select.field-input option { background: #1c2128; }
+    select.field-input option { background: var(--bg-card); color: var(--text); }
 
     /* Film type badge */
     .stock-meta { min-height: 20px; margin-top: 4px; }
@@ -265,12 +285,74 @@
     .badge-color { background: rgba(96,165,250,0.14); color: #60a5fa; }
     .badge-bw    { background: rgba(148,163,184,0.14); color: #94a3b8; }
     .badge-slide { background: rgba(167,139,250,0.14); color: #a78bfa; }
+    .brand-meta { min-height: 24px; margin-top: 6px; }
+    .brand-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg-subtle);
+      font-size: 0.72rem;
+      color: var(--text-2);
+    }
+    .brand-logo {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .brand-fallback {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.58rem;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .badge-expired {
+      background: rgba(248,113,113,0.14);
+      color: var(--red);
+      border: 1px solid rgba(248,113,113,0.28);
+    }
+    .badge-fresh {
+      background: rgba(74,222,128,0.12);
+      color: var(--green);
+      border: 1px solid rgba(74,222,128,0.24);
+    }
+
+    .toggle-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .toggle-field input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--accent);
+    }
+    .toggle-label {
+      font-size: 0.8rem;
+      color: var(--text-2);
+      user-select: none;
+      cursor: pointer;
+    }
 
     /* Result panel */
     .result-panel {
       margin-top: 14px;
       padding: 12px 14px;
-      background: rgba(0,0,0,0.25);
+      background: var(--bg-subtle);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
     }
@@ -328,7 +410,7 @@
       letter-spacing: 0.07em;
       color: var(--text-3);
       border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
+      background: var(--bg-subtle);
       text-align: left;
     }
     .cmp td {
@@ -342,6 +424,33 @@
     .cmp td.cost-val { color: var(--accent); font-weight: 600; }
     .cmp tr.row-best td { background: rgba(230,168,23,0.05); }
     .cmp tr.row-best td.cost-val { color: var(--green); }
+    .brand-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand-logo-table {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .brand-fallback-table {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.58rem;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
     .badge-best {
       display: inline-block;
       font-size: 0.62rem;
@@ -383,8 +492,56 @@
       font-size: 0.76rem;
       transition: background var(--ease), border-color var(--ease), color var(--ease);
     }
-    .gh-link:hover { background: rgba(255,255,255,0.05); border-color: var(--border-hover); color: var(--text); }
+    .gh-link:hover { background: var(--bg-subtle); border-color: var(--border-hover); color: var(--text); }
     .gh-icon { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── PRIVACY MODAL ──────────────────────────────────────── */
+    .privacy-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.66);
+      z-index: 250;
+      padding: 16px;
+    }
+    .privacy-modal.show { display: flex; }
+    .privacy-panel {
+      width: min(680px, 100%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .privacy-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .privacy-copy {
+      font-size: 0.84rem;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin-bottom: 10px;
+    }
+    .privacy-list {
+      margin: 8px 0 14px;
+      padding-left: 16px;
+      color: var(--text-2);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    .privacy-list li + li { margin-top: 4px; }
+    .privacy-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
     /* ── LOADING ─────────────────────────────────────────────── */
     .loader {
@@ -427,6 +584,7 @@
     <span class="header-name">Film Cost Calculator</span>
   </div>
   <div class="header-right">
+    <button type="button" id="themeToggleBtn" class="btn" aria-label="Toggle theme">Light Mode</button>
     <a id="hdrGhLink" href="#" target="_blank" rel="noopener" class="gh-link">
       <svg class="gh-icon" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       GitHub
@@ -459,7 +617,9 @@
         <thead>
           <tr>
             <th>Roll</th>
+            <th>Brand</th>
             <th>Stock</th>
+            <th>Expired</th>
             <th>Format</th>
             <th>Exposures</th>
             <th>Cost / Exposure</th>
@@ -482,6 +642,7 @@
     <a id="forkLink" href="#" target="_blank" rel="noopener">MohamedSibaaq</a>
   </div>
   <div class="footer-links">
+    <a href="privacy.html" class="gh-link">Privacy Policy</a>
     <a id="origRepoLink" href="#" target="_blank" rel="noopener" class="gh-link">
       <svg class="gh-icon" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
       Original
@@ -493,11 +654,49 @@
   </div>
 </footer>
 
+<!-- PRIVACY CONSENT -->
+<div class="privacy-modal" id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+  <div class="privacy-panel">
+    <h2 class="privacy-title" id="privacyTitle">Privacy Notice and Cookie Consent</h2>
+    <p class="privacy-copy">
+      This calculator does not use analytics, ad tracking, or third-party trackers.
+      We only store calculator data and your consent preference locally in your browser.
+    </p>
+    <ul class="privacy-list">
+      <li>Essential storage: enabled (required to remember your roll data and settings).</li>
+      <li>Non-essential cookies: disabled by default and not used by this app.</li>
+      <li>You can read full details in the Privacy Policy page.</li>
+    </ul>
+    <div class="privacy-actions">
+      <a href="privacy.html" class="btn" target="_blank" rel="noopener">Read Privacy Policy</a>
+      <button type="button" class="btn" id="consentReject">Reject Non-Essential</button>
+      <button type="button" class="btn btn-primary" id="consentAccept">Accept Essential Only</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'filmCalc_v3';
+const CONSENT_KEY = 'filmCalc_privacyConsent_v1';
+const THEME_KEY = 'filmCalc_theme_v1';
 let cfg = null;
 let debouncer = null;
+
+// Brand domain map for CDN logos (Clearbit)
+const BRAND_DOMAINS = {
+  'Kodak': 'kodak.com',
+  'Fujifilm': 'fujifilm.com',
+  'Ilford': 'ilfordphoto.com',
+  'Lomography': 'lomography.com',
+  'CineStill': 'cinestillfilm.com',
+  'Kentmere': 'kentmere400.com',
+  'Foma': 'foma.cz',
+  'ADOX': 'adox.de',
+  'ORWO': 'orwo.shop',
+  'Rollei': 'rollei.com',
+  'Harman': 'harmantechnology.com',
+};
 
 const FALLBACK = {
   site: {
@@ -552,6 +751,65 @@ function getArea(val) {
 function getFormatLabel(val) {
   return (cfg.film_formats.find(f => f.value === val) || {}).label || val;
 }
+function getBrandDomain(name) {
+  if (!name) return '';
+  return BRAND_DOMAINS[name] || '';
+}
+function getBrandLogoUrl(name) {
+  const domain = getBrandDomain(name);
+  return domain ? `https://logo.clearbit.com/${domain}` : '';
+}
+function getBrandInitials(name) {
+  if (!name) return '';
+  return name.split(/\s+/).map(x => x[0]).join('').slice(0,2).toUpperCase();
+}
+
+function hasConsent() {
+  return Boolean(localStorage.getItem(CONSENT_KEY));
+}
+
+function setConsent(mode) {
+  localStorage.setItem(CONSENT_KEY, JSON.stringify({
+    mode,
+    timestamp: new Date().toISOString(),
+  }));
+}
+
+function closeConsentModal() {
+  const modal = document.getElementById('privacyModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function showConsentModalIfNeeded() {
+  if (hasConsent()) return;
+  const modal = document.getElementById('privacyModal');
+  if (!modal) return;
+  modal.classList.add('show');
+
+  const accept = document.getElementById('consentAccept');
+  const reject = document.getElementById('consentReject');
+  accept.onclick = () => { setConsent('essential_only'); closeConsentModal(); };
+  reject.onclick = () => { setConsent('reject_non_essential'); closeConsentModal(); };
+}
+
+function setTheme(mode) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', mode);
+  localStorage.setItem(THEME_KEY, mode);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = mode === 'light' ? 'Dark Mode' : 'Light Mode';
+}
+
+function initThemeToggle() {
+  const saved = localStorage.getItem(THEME_KEY) || 'dark';
+  setTheme(saved === 'light' ? 'light' : 'dark');
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  });
+}
 
 // ── Build option HTML ─────────────────────────────────────────────────────────
 function fmtOptions(sel) {
@@ -585,6 +843,50 @@ function updateBadge(form) {
   const cls   = {color:'badge-color',bw:'badge-bw',slide:'badge-slide'}[type]||'badge-bw';
   const lbl   = {color:'Color',bw:'B&W',slide:'Slide'}[type]||type;
   el.innerHTML = `<span class="stock-badge ${cls}">${lbl} · ISO ${esc(iso)}</span>`;
+}
+
+function updateBrandMeta(form) {
+  const brand = form.querySelector('.film-brand').value;
+  const meta = form.querySelector('.brand-meta');
+  if (!meta) return;
+  if (!brand) {
+    meta.innerHTML = '';
+    return;
+  }
+
+  const logoUrl = getBrandLogoUrl(brand);
+  const initials = getBrandInitials(brand);
+  meta.innerHTML = `<span class="brand-chip"><img class="brand-logo" alt="${esc(brand)} logo" loading="lazy" referrerpolicy="no-referrer"><span class="brand-fallback">${esc(initials)}</span><span>${esc(brand)}</span></span>`;
+
+  const img = meta.querySelector('.brand-logo');
+  const fallback = meta.querySelector('.brand-fallback');
+  if (!img || !fallback) return;
+  if (!logoUrl) {
+    img.remove();
+    return;
+  }
+
+  fallback.style.display = 'none';
+  img.src = logoUrl;
+  img.addEventListener('load', () => {
+    img.style.display = 'inline-block';
+    fallback.style.display = 'none';
+  }, { once: true });
+  img.addEventListener('error', () => {
+    img.style.display = 'none';
+    fallback.style.display = 'inline-grid';
+  }, { once: true });
+}
+
+function renderBrandCell(brand) {
+  if (!brand || brand === '—') return '—';
+  const logoUrl = getBrandLogoUrl(brand);
+  const initials = esc(getBrandInitials(brand));
+  const safeBrand = esc(brand);
+  if (!logoUrl) {
+    return `<span class="brand-inline"><span class="brand-fallback-table">${initials}</span><span>${safeBrand}</span></span>`;
+  }
+  return `<span class="brand-inline"><img class="brand-logo-table" src="${esc(logoUrl)}" alt="${safeBrand} logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid';"><span class="brand-fallback-table" style="display:none">${initials}</span><span>${safeBrand}</span></span>`;
 }
 
 // ── Calculate ─────────────────────────────────────────────────────────────────
@@ -621,6 +923,7 @@ function createCard(idx, data={}) {
     <div class="field">
       <label class="field-label">Brand</label>
       <select class="field-input film-brand">${brandOptions(data.brand||'')}</select>
+      <div class="brand-meta"></div>
     </div>
     <div class="field">
       <label class="field-label">Film Stock</label>
@@ -630,6 +933,10 @@ function createCard(idx, data={}) {
     <div class="field">
       <label class="field-label">Film Format</label>
       <select class="field-input film-format">${fmtOptions(data.format||cfg.film_formats[0].value)}</select>
+    </div>
+    <div class="field toggle-field">
+      <input type="checkbox" class="expired-flag" id="expired-${idx}" ${data.expired ? 'checked' : ''}>
+      <label class="toggle-label" for="expired-${idx}">Expired Film</label>
     </div>
     <div class="field">
       <label class="field-label">Film Price</label>
@@ -661,16 +968,19 @@ function createCard(idx, data={}) {
   const stockSel = div.querySelector('.film-stock');
   brandSel.addEventListener('change', () => {
     stockSel.innerHTML = stockOptions(brandSel.value, '');
+    updateBrandMeta(div);
     updateBadge(div); calcForm(div); debounceSave(); updateComparison();
   });
   stockSel.addEventListener('change', () => { updateBadge(div); calcForm(div); debounceSave(); updateComparison(); });
 
   updateBadge(div);
+  updateBrandMeta(div);
 
   // Other inputs
   const recalc = () => { calcForm(div); debounceSave(); updateComparison(); };
   div.querySelector('.film-format').addEventListener('change', recalc);
   div.querySelector('.exposures').addEventListener('input', recalc);
+  div.querySelector('.expired-flag').addEventListener('change', () => { debounceSave(); updateComparison(); });
   ['.film-price','.dev-price'].forEach(sel => {
     const inp = div.querySelector(sel);
     inp.addEventListener('input', recalc);
@@ -696,8 +1006,10 @@ function createCard(idx, data={}) {
     div.querySelector('.exposures').value  = '';
     div.querySelector('.film-brand').value = '';
     stockSel.innerHTML = stockOptions('', '');
+    updateBrandMeta(div);
     div.querySelector('.stock-meta').innerHTML = '';
     div.querySelector('.film-format').value = cfg.film_formats[0].value;
+    div.querySelector('.expired-flag').checked = false;
     calcForm(div); saveAll(); updateComparison();
   });
 
@@ -762,7 +1074,9 @@ function updateComparison() {
     const total = film + dev;
     return {
       title:  f.querySelector('.film-title').value,
+      brand:  f.querySelector('.film-brand').value || '—',
       stock:  f.querySelector('.film-stock').value || '—',
+      expired: f.querySelector('.expired-flag').checked,
       fmt:    getFormatLabel(fmt),
       exp,
       perExp:  exp>0 ? total/exp : null,
@@ -777,7 +1091,9 @@ function updateComparison() {
     const best = r.perExp != null && r.perExp === min && valid.length > 1;
     return `<tr class="${best?'row-best':''}">
       <td class="name">${esc(r.title)}${best?'<span class="badge-best">Best</span>':''}</td>
+      <td>${renderBrandCell(r.brand)}</td>
       <td>${esc(r.stock)}</td>
+      <td>${r.expired?'<span class="stock-badge badge-expired">Yes</span>':'<span class="stock-badge badge-fresh">No</span>'}</td>
       <td>${esc(r.fmt)}</td>
       <td>${r.exp||'—'}</td>
       <td class="cost-val">${r.perExp!=null?'$'+fmt2(r.perExp):'—'}</td>
@@ -796,6 +1112,7 @@ function saveAll() {
     format:    f.querySelector('.film-format').value,
     brand:     f.querySelector('.film-brand').value,
     stock:     f.querySelector('.film-stock').value,
+    expired:   f.querySelector('.expired-flag').checked,
   }));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
@@ -834,6 +1151,7 @@ function initDrag() {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 async function boot() {
+  initThemeToggle();
   await loadCfg();
 
   // Apply site metadata
@@ -879,6 +1197,8 @@ async function boot() {
   const ldr = document.getElementById('loader');
   ldr.classList.add('out');
   setTimeout(() => ldr.remove(), 300);
+
+  showConsentModalIfNeeded();
 }
 
 boot();
