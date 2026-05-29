@@ -1,5 +1,8 @@
 FROM python:3.13-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1
+
 # Create a non-root user for security
 RUN addgroup --system appgroup \
  && adduser  --system --ingroup appgroup appuser
@@ -8,7 +11,8 @@ WORKDIR /app
 
 # Install dependencies first (layer cached separately from source)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .

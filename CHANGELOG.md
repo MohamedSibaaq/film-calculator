@@ -6,6 +6,15 @@ The format is inspired by Keep a Changelog and this project follows semantic-sty
 
 ## [Unreleased]
 
+### Security
+- Hardened Flask response headers with CSP, COOP, and CORP defaults for direct app traffic and defence-in-depth behind nginx.
+- Added trusted reverse-proxy handling (`ProxyFix`) and capped request body size to reduce header spoofing and oversized request risk.
+- Tightened nginx request handling with method allowlisting (`GET`/`HEAD` only), small body limits, and shorter client/send timeouts.
+- Disabled TLS session tickets in HTTPS config and added modern isolation/security headers in both nginx runtime and template configs.
+- Added deny rules for hidden and VCS path access (`/.` and `.git`) at the proxy layer.
+- Applied CIS-aligned container hardening in Compose: `no-new-privileges`, dropped Linux capabilities, and read-only root filesystem for the Flask app container.
+- Updated nginx image channel from fixed `1.27-alpine` to `stable-alpine` for ongoing stable security updates.
+
 ### Planned
 - Add CI pipeline for linting, Docker build validation, and basic smoke tests.
 - Add automated test coverage for calculator logic and config API responses.

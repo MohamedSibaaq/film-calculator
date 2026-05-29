@@ -55,6 +55,32 @@ Open `http://localhost` — nginx proxies to Flask on the internal network; port
 
 Edit `config.yaml` and refresh; the volume mount means no rebuild is needed.
 
+## Security hardening baseline (NIST / OWASP / CIS)
+
+The stack includes a practical hardening baseline aligned to common controls from:
+- NIST SP 800-53 (secure transport and boundary protection)
+- OWASP ASVS / Top 10 (secure headers, input/request constraints, least privilege)
+- CIS Docker and CIS NGINX guidance (container isolation and safer defaults)
+
+Implemented controls in this repository:
+- Strict security headers at both Flask and nginx layers (defence-in-depth), including CSP, HSTS (HTTPS mode), COOP, CORP, and anti-MIME sniffing.
+- API abuse controls with nginx rate limiting plus `GET`/`HEAD` method allowlisting.
+- Request size and timeout limits to reduce DoS/resource-exhaustion exposure.
+- Reverse-proxy trust controls in Flask (`ProxyFix`) and explicit forwarded headers.
+- Container least privilege: non-root app user, dropped Linux capabilities, and `no-new-privileges`.
+- Read-only root filesystem for the Flask container with writable `tmpfs` only.
+
+Quick verification commands:
+
+```bash
+docker compose config
+docker compose up -d --build
+curl -I http://localhost
+curl -I http://localhost/api/config
+```
+
+For HTTPS deployments, verify TLS and headers externally with SSL Labs and Mozilla Observatory.
+
 ## Cloud deployment
 
 ### 1 — Copy files to your server
