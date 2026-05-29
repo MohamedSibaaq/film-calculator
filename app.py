@@ -17,7 +17,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 # Only these top-level config.yaml keys are forwarded to the client.
 # Any future sensitive keys (credentials, internal flags, etc.) are never exposed.
 # OWASP A03: Prevents data over-exposure / excessive data exposure.
-_CONFIG_ALLOWLIST = frozenset({"app", "film_formats", "film_brands"})
+_CONFIG_ALLOWLIST = frozenset({"site", "app", "film_formats", "film_brands"})
 
 # Origins permitted to make cross-origin requests to /api/.
 # OWASP A01: Broken Access Control — reject unknown origins.
