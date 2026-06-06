@@ -11,8 +11,8 @@ site:
   fork_repo: "https://github.com/MohamedSibaaq/film-calculator"
 
 app:
-  max_rolls: 10
-  default_rolls: 2
+  max_rolls: 50
+  default_rolls: 4
 
 # Film formats - value must be unique; area_sqmm is the exposure area in square millimetres
 film_formats:

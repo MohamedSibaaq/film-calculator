@@ -4,7 +4,14 @@ services:
     # No host port — only reachable by nginx over the internal network
     volumes:
       - ./config.yaml:/app/config.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
     env_file: .env
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/\")' || exit 1"]
@@ -16,7 +23,7 @@ services:
       - internal
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:stable-alpine
     ports:
       - "80:80"
       - "443:443"
@@ -24,13 +31,22 @@ services:
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
       # Uncomment after placing SSL certs in nginx/certs/
-      # - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
     # Substitute ${DOMAIN} from .env into the config before nginx starts.
     # $${DOMAIN} escapes docker-compose interpolation so the shell receives $DOMAIN.
     command: sh -c "envsubst '$${DOMAIN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
     depends_on:
       film-calculator:
         condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
     restart: unless-stopped
     networks:
       - internal

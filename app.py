@@ -1,8 +1,14 @@
 import os
 from flask import Flask, jsonify, send_from_directory, abort, request
 import yaml
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Keep request bodies very small; this app accepts only tiny form/API payloads.
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 
@@ -11,7 +17,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 # Only these top-level config.yaml keys are forwarded to the client.
 # Any future sensitive keys (credentials, internal flags, etc.) are never exposed.
 # OWASP A03: Prevents data over-exposure / excessive data exposure.
-_CONFIG_ALLOWLIST = frozenset({"app", "film_formats", "film_brands"})
+_CONFIG_ALLOWLIST = frozenset({"site", "app", "film_formats", "film_brands"})
 
 # Origins permitted to make cross-origin requests to /api/.
 # OWASP A01: Broken Access Control — reject unknown origins.
@@ -40,6 +46,22 @@ def set_security_headers(response):
         "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
     )
     response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https://logo.clearbit.com; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests",
+    )
 
     if request.path.startswith("/api/"):
         # Prevent caching of API responses — no stale config data in proxies/browsers.
