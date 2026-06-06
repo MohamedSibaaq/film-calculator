@@ -1,0 +1,232 @@
+name: Deployment Validation and Compliance
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  IMAGE_NAME: film-calculator-ci
+  TEST_DOMAIN: localhost
+
+jobs:
+  app-validation:
+    name: App tests and config validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile Python source
+        run: python -m py_compile app.py
+
+      - name: Validate YAML configuration schema
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          config = yaml.safe_load(Path("config.yaml").read_text(encoding="utf-8"))
+          required_top_level = {"site", "app", "film_formats", "film_brands"}
+          missing = required_top_level - set(config)
+          assert not missing, f"Missing top-level config keys: {sorted(missing)}"
+
+          assert isinstance(config["app"].get("max_rolls"), int)
+          assert isinstance(config["app"].get("default_rolls"), int)
+          assert config["app"]["default_rolls"] <= config["app"]["max_rolls"]
+
+          format_values = set()
+          for item in config["film_formats"]:
+              assert item["label"]
+              assert item["value"] not in format_values, f"Duplicate format value: {item['value']}"
+              format_values.add(item["value"])
+              assert item["area_sqmm"] > 0
+
+          allowed_types = {"color", "bw", "slide"}
+          for brand in config["film_brands"]:
+              assert brand["brand"]
+              assert brand["films"], f"{brand['brand']} has no films"
+              for film in brand["films"]:
+                  assert film["name"]
+                  assert isinstance(film["iso"], int) and film["iso"] > 0
+                  assert film["type"] in allowed_types, f"Unexpected film type: {film['type']}"
+          PY
+
+      - name: Validate Flask endpoints and OWASP security controls
+        env:
+          DOMAIN: localhost
+        run: |
+          python - <<'PY'
+          from app import app
+
+          client = app.test_client()
+
+          index = client.get("/")
+          assert index.status_code == 200
+          assert index.headers["X-Content-Type-Options"] == "nosniff"
+          assert index.headers["X-Frame-Options"] == "DENY"
+          assert index.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+          assert "geolocation=()" in index.headers["Permissions-Policy"]
+
+          config = client.get("/api/config", headers={"Origin": "http://localhost"})
+          assert config.status_code == 200
+          assert config.headers["Access-Control-Allow-Origin"] == "http://localhost"
+          assert config.headers["Cache-Control"] == "no-store"
+          assert config.headers["X-Robots-Tag"] == "noindex, nofollow"
+          payload = config.get_json()
+          assert set(payload) == {"app", "film_brands", "film_formats"}
+
+          blocked = client.get("/api/config", headers={"Origin": "https://evil.example"})
+          assert blocked.status_code == 403
+          PY
+
+  nist-owasp-cis-static-checks:
+    name: NIST, OWASP, and CIS static checks
+    runs-on: ubuntu-latest
+    needs: app-validation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install security validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit yamllint
+
+      - name: NIST RA-5 and OWASP dependency audit
+        run: pip-audit -r requirements.txt
+
+      - name: OWASP A03/A05 source security scan
+        run: bandit -r app.py -ll
+
+      - name: CIS configuration linting
+        run: yamllint -d relaxed config.yaml docker-compose.yml .github/workflows/deployment-validation.yml
+
+      - name: OWASP Semgrep rules
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+
+      - name: Dockerfile CIS and NIST hardening checks
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: Dockerfile
+          framework: dockerfile
+          quiet: true
+
+      - name: Docker Compose CIS and NIST hardening checks
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: docker-compose.yml
+          framework: docker_compose
+          quiet: true
+
+  deployment-smoke-test:
+    name: Build and validate Docker deployment
+    runs-on: ubuntu-latest
+    needs: nist-owasp-cis-static-checks
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare CI environment file
+        run: |
+          cp .env.example .env
+          sed -i "s/^DOMAIN=.*/DOMAIN=${TEST_DOMAIN}/" .env
+          sed -i "s/^SERVER_IP=.*/SERVER_IP=127.0.0.1/" .env
+          sed -i "s/^PORT=.*/PORT=5000/" .env
+
+      - name: Build application image
+        run: docker build --tag "${IMAGE_NAME}:${GITHUB_SHA}" .
+
+      - name: Run Trivy image scan for NIST, OWASP, and CIS findings
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          vuln-type: os,library
+          scanners: vuln,secret,misconfig
+          exit-code: "1"
+
+      - name: Start Docker Compose deployment
+        run: docker compose up --build --detach
+
+      - name: Wait for nginx endpoint
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://localhost/ > /tmp/film-calculator.html; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs
+          exit 1
+
+      - name: Validate deployed HTTP security headers
+        run: |
+          curl --fail --silent --show-error --head http://localhost/ | tee /tmp/headers.txt
+          grep -qi '^X-Frame-Options: DENY' /tmp/headers.txt
+          grep -qi '^X-Content-Type-Options: nosniff' /tmp/headers.txt
+          grep -qi '^Referrer-Policy: strict-origin-when-cross-origin' /tmp/headers.txt
+          grep -qi '^Permissions-Policy: geolocation=(), microphone=(), camera=()' /tmp/headers.txt
+
+      - name: Validate deployed API response
+        run: |
+          curl --fail --silent --show-error http://localhost/api/config | python -m json.tool > /tmp/config.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/config.json").read_text(encoding="utf-8"))
+          assert set(payload) == {"app", "film_brands", "film_formats"}
+          assert payload["app"]["max_rolls"] >= payload["app"]["default_rolls"]
+          assert payload["film_brands"]
+          assert payload["film_formats"]
+          PY
+
+      - name: Verify CIS container runtime posture
+        run: |
+          app_user="$(docker compose exec -T film-calculator id -u)"
+          test "${app_user}" != "0"
+          docker compose exec -T film-calculator test -r /app/config.yaml
+          docker compose exec -T film-calculator test ! -w /app/config.yaml
+
+      - name: Show deployment logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop Docker Compose deployment
+        if: always()
+        run: docker compose down --volumes --remove-orphans
