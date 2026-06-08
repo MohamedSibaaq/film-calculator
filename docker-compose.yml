@@ -2,11 +2,15 @@ services:
   film-calculator:
     build: .
     # No host port — only reachable by nginx over the internal network
+    init: true
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     read_only: true
     tmpfs:
       - /tmp
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.50
     env_file: .env
     security_opt:
       - no-new-privileges:true
@@ -24,6 +28,7 @@ services:
 
   nginx:
     image: nginx:stable-alpine
+    init: true
     ports:
       - "80:80"
       - "443:443"
@@ -47,6 +52,9 @@ services:
       - SETGID
       - SETUID
       - NET_BIND_SERVICE
+    pids_limit: 128
+    mem_limit: 128m
+    cpus: 0.50
     restart: unless-stopped
     networks:
       - internal

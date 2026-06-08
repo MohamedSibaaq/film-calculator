@@ -14,10 +14,22 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 
 # ── Security configuration ────────────────────────────────────────────────────
 
-# Only these top-level config.yaml keys are forwarded to the client.
-# Any future sensitive keys (credentials, internal flags, etc.) are never exposed.
+# Only these top-level config.yaml keys are forwarded to the client. The public
+# site metadata is needed by index.html; future sensitive keys are not exposed.
 # OWASP A03: Prevents data over-exposure / excessive data exposure.
 _CONFIG_ALLOWLIST = frozenset({"site", "app", "film_formats", "film_brands"})
+
+# Serve only website assets from Flask. This keeps direct Flask access from
+# exposing deployment files such as .env, Dockerfile, app.py, or config.yaml.
+_PUBLIC_ROOT_FILES = frozenset({
+    "index.html",
+    "privacy.html",
+    "robots.txt",
+    "sitemap.xml",
+    "README.md",
+    "LICENSE",
+})
+_PUBLIC_DIRECTORIES = frozenset({"assets"})
 
 # Origins permitted to make cross-origin requests to /api/.
 # OWASP A01: Broken Access Control — reject unknown origins.
@@ -52,6 +64,7 @@ def set_security_headers(response):
         "Content-Security-Policy",
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline'; "
+        "script-src-attr 'none'; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: https://logo.clearbit.com; "
         "font-src 'self'; "
@@ -82,7 +95,7 @@ def get_config():
     - Cross-origin requests from unlisted origins are rejected with 403
       (OWASP A01 — Broken Access Control).
     - Only allowlisted top-level keys are returned; internal config keys
-      such as 'site' metadata are stripped before the response is sent
+      outside the public UI contract are stripped before the response is sent
       (OWASP A03 — Sensitive Data Exposure / excessive data exposure).
     - File read and YAML parse errors are caught and converted to a generic
       500 without leaking internal paths or exception details to the caller
@@ -99,6 +112,7 @@ def get_config():
             raw = yaml.safe_load(f)
     except (OSError, yaml.YAMLError):
         # Do not leak file path or parse details to the caller.
+        app.logger.exception("Unable to load public configuration")
         abort(500)
 
     if not isinstance(raw, dict):
@@ -127,7 +141,19 @@ def static_files(path):
     resolving the path relative to BASE_DIR and rejecting paths that
     escape it (OWASP A01 — Path Traversal).
     """
-    return send_from_directory(BASE_DIR, path)
+    clean_path = path.replace("\\", "/").lstrip("/")
+    parts = [part for part in clean_path.split("/") if part]
+
+    if (
+        not parts
+        or any(part == ".." for part in parts)
+        or any(part.startswith(".") for part in parts)
+        or parts[0] not in _PUBLIC_DIRECTORIES | _PUBLIC_ROOT_FILES
+        or (parts[0] in _PUBLIC_ROOT_FILES and len(parts) > 1)
+    ):
+        abort(404)
+
+    return send_from_directory(BASE_DIR, clean_path)
 
 
 if __name__ == "__main__":

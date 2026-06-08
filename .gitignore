@@ -35,3 +35,4 @@ Thumbs.db
 # Local planning notes
 suggestions.md
 reddit-post.md
+tests/test_security.py

@@ -763,6 +763,15 @@ function getBrandInitials(name) {
   if (!name) return '';
   return name.split(/\s+/).map(x => x[0]).join('').slice(0,2).toUpperCase();
 }
+function safeHref(href) {
+  if (!href) return '';
+  try {
+    const url = new URL(href, window.location.origin);
+    if (url.origin === window.location.origin) return url.href;
+    if (url.protocol === 'https:' && url.hostname === 'github.com') return url.href;
+  } catch {}
+  return '';
+}
 
 function hasConsent() {
   return Boolean(localStorage.getItem(CONSENT_KEY));
@@ -887,7 +896,27 @@ function renderBrandCell(brand) {
   if (!logoUrl) {
     return `<span class="brand-inline"><span class="brand-fallback-table">${initials}</span><span>${safeBrand}</span></span>`;
   }
-  return `<span class="brand-inline"><img class="brand-logo-table" src="${esc(logoUrl)}" alt="${safeBrand} logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-grid';"><span class="brand-fallback-table" style="display:none">${initials}</span><span>${safeBrand}</span></span>`;
+  return `<span class="brand-inline"><img class="brand-logo-table" src="${esc(logoUrl)}" alt="${safeBrand} logo" loading="lazy" referrerpolicy="no-referrer" data-logo-fallback="true"><span class="brand-fallback-table" style="display:none">${initials}</span><span>${safeBrand}</span></span>`;
+}
+
+function hydrateBrandLogoFallbacks(root) {
+  root.querySelectorAll('img[data-logo-fallback="true"]').forEach(img => {
+    const fallback = img.nextElementSibling;
+    if (!fallback) return;
+
+    const showLogo = () => {
+      img.style.display = 'inline-block';
+      fallback.style.display = 'none';
+    };
+    const showFallback = () => {
+      img.style.display = 'none';
+      fallback.style.display = 'inline-grid';
+    };
+
+    img.addEventListener('load', showLogo, { once: true });
+    img.addEventListener('error', showFallback, { once: true });
+    if (img.complete) (img.naturalWidth > 0 ? showLogo : showFallback)();
+  });
 }
 
 // ── Custom brand/stock helpers ────────────────────────────────────────────────
@@ -1126,7 +1155,8 @@ function updateComparison() {
   const valid = rows.filter(r => r.perExp != null).map(r => r.perExp);
   const min   = valid.length ? Math.min(...valid) : null;
 
-  document.getElementById('cmpBody').innerHTML = rows.map(r => {
+  const comparisonBody = document.getElementById('cmpBody');
+  comparisonBody.innerHTML = rows.map(r => {
     const best = r.perExp != null && r.perExp === min && valid.length > 1;
     return `<tr class="${best?'row-best':''}">
       <td class="name">${esc(r.title)}${best?'<span class="badge-best">Best</span>':''}</td>
@@ -1139,6 +1169,7 @@ function updateComparison() {
       <td>${r.perSqmm!=null?'$'+r.perSqmm.toFixed(6):'—'}</td>
     </tr>`;
   }).join('');
+  hydrateBrandLogoFallbacks(comparisonBody);
 }
 
 // ── Storage ───────────────────────────────────────────────────────────────────
@@ -1202,7 +1233,11 @@ async function boot() {
 
   const set = (id, href, txt) => {
     const el = document.getElementById(id);
-    if (el) { if (href) el.href = href; if (txt) el.textContent = txt; }
+    if (el) {
+      const safe = safeHref(href);
+      if (safe) el.href = safe;
+      if (txt) el.textContent = txt;
+    }
   };
   set('hdrGhLink',   site.fork_repo, null);
   set('origLink',    `https://github.com/${site.original_author||'andikaraditya'}`, site.original_author||'andikaraditya');

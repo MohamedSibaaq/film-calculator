@@ -39,6 +39,9 @@ jobs:
       - name: Compile Python source
         run: python -m py_compile app.py
 
+      - name: Run security regression tests
+        run: python -m unittest discover -s tests
+
       - name: Validate YAML configuration schema
         run: |
           python - <<'PY'
@@ -93,7 +96,7 @@ jobs:
           assert config.headers["Cache-Control"] == "no-store"
           assert config.headers["X-Robots-Tag"] == "noindex, nofollow"
           payload = config.get_json()
-          assert set(payload) == {"app", "film_brands", "film_formats"}
+          assert set(payload) == {"site", "app", "film_brands", "film_formats"}
 
           blocked = client.get("/api/config", headers={"Origin": "https://evil.example"})
           assert blocked.status_code == 403
@@ -201,6 +204,7 @@ jobs:
           grep -qi '^X-Content-Type-Options: nosniff' /tmp/headers.txt
           grep -qi '^Referrer-Policy: strict-origin-when-cross-origin' /tmp/headers.txt
           grep -qi '^Permissions-Policy: geolocation=(), microphone=(), camera=()' /tmp/headers.txt
+          grep -qi "script-src-attr 'none'" /tmp/headers.txt
 
       - name: Validate deployed API response
         run: |
@@ -210,7 +214,7 @@ jobs:
           from pathlib import Path
 
           payload = json.loads(Path("/tmp/config.json").read_text(encoding="utf-8"))
-          assert set(payload) == {"app", "film_brands", "film_formats"}
+          assert set(payload) == {"site", "app", "film_brands", "film_formats"}
           assert payload["app"]["max_rolls"] >= payload["app"]["default_rolls"]
           assert payload["film_brands"]
           assert payload["film_formats"]

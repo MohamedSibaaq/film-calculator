@@ -1,4 +1,5 @@
 .git
+.github
 .gitignore
 __pycache__
 *.pyc
@@ -11,5 +12,8 @@ __pycache__
 .venv
 venv/
 node_modules/
-README.md
+tests/
 nginx/
+CHANGELOG.md
+reddit-post.md
+suggestions.md
