@@ -113,6 +113,54 @@ http {
         }
     }
 
+    # ── FiyavalhuMV web UI (separate app, separate domain) ─────────────────────
+    # Independent server{} block - does not touch film-calculator's block above.
+    # Deliberately safe to deploy before the fiyavalhu-web container exists:
+    #  - uses Docker's embedded DNS (127.0.0.11) with a `set` + variable
+    #    proxy_pass so the hostname is resolved lazily per-request, not at
+    #    nginx startup. A static `upstream { server fiyavalhu-web:PORT; }`
+    #    block here would make nginx refuse to start at all - for BOTH
+    #    apps - if that host isn't resolvable yet.
+    #  - FIYAVALHU_DOMAIN defaults to a harmless, non-matchable placeholder
+    #    (see docker-compose.yml's command) if unset, so a missing .env value
+    #    can't produce an empty server_name and break config parsing.
+    # Update the proxy_pass target below once the fiyavalhu-web container
+    # (and its real port) actually exists.
+    server {
+        listen 80;
+        server_name ${FIYAVALHU_DOMAIN};
+        resolver 127.0.0.11 valid=10s;
+
+        client_max_body_size 10m;  # this app may need bigger uploads than film-calculator's 16k default
+
+        # Security headers (same policy as the film-calculator server block above)
+        add_header X-Frame-Options                   "DENY"                             always;
+        add_header X-Content-Type-Options            "nosniff"                          always;
+        add_header Referrer-Policy                   "strict-origin-when-cross-origin"  always;
+        add_header Permissions-Policy                "geolocation=(), microphone=(), camera=()" always;
+        add_header X-Permitted-Cross-Domain-Policies "none"                             always;
+        add_header Cross-Origin-Opener-Policy        "same-origin"                      always;
+        add_header Cross-Origin-Resource-Policy      "same-origin"                      always;
+
+        location / {
+            set $fiyavalhu_upstream "http://fiyavalhu-web:8000";
+            proxy_pass         $fiyavalhu_upstream;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection        "";
+            proxy_set_header   Host              ${FIYAVALHU_DOMAIN};
+            proxy_set_header   X-Real-IP         $remote_addr;
+            proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+            proxy_read_timeout 30s;
+        }
+
+        location ~ /\.|\.git {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+    }
+
     # ── HTTPS ─────────────────────────────────────────────────────────────────
     # Uncomment this entire block after placing certificates in nginx/certs/.
     # Certbot: sudo certbot certonly --standalone -d ${DOMAIN}
