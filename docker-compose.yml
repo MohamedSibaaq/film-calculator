@@ -44,7 +44,7 @@ services:
     # reserved .invalid TLD) if unset in .env, so a missing value there can
     # never produce an empty server_name and break nginx config parsing -
     # this app's own server_name is left completely unaffected either way.
-    command: sh -c "export FIYAVALHU_DOMAIN=\${FIYAVALHU_DOMAIN:-fiyavalhu.invalid}; envsubst '$${DOMAIN} $${FIYAVALHU_DOMAIN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    command: sh -c "export FIYAVALHU_DOMAIN=$${FIYAVALHU_DOMAIN:-fiyavalhu.invalid}; envsubst '$${DOMAIN} $${FIYAVALHU_DOMAIN}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
     depends_on:
       film-calculator:
         condition: service_healthy

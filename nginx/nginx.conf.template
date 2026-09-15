@@ -115,17 +115,23 @@ http {
 
     # ── FiyavalhuMV web UI (separate app, separate domain) ─────────────────────
     # Independent server{} block - does not touch film-calculator's block above.
-    # Deliberately safe to deploy before the fiyavalhu-web container exists:
+    # Deliberately safe to deploy before the fiyavalhu-web-backend/-frontend
+    # containers exist:
     #  - uses Docker's embedded DNS (127.0.0.11) with a `set` + variable
-    #    proxy_pass so the hostname is resolved lazily per-request, not at
-    #    nginx startup. A static `upstream { server fiyavalhu-web:PORT; }`
-    #    block here would make nginx refuse to start at all - for BOTH
-    #    apps - if that host isn't resolvable yet.
+    #    proxy_pass so each hostname is resolved lazily per-request, not at
+    #    nginx startup. A static `upstream { server ...; }` block here would
+    #    make nginx refuse to start at all - for BOTH apps - if either host
+    #    isn't resolvable yet.
     #  - FIYAVALHU_DOMAIN defaults to a harmless, non-matchable placeholder
     #    (see docker-compose.yml's command) if unset, so a missing .env value
     #    can't produce an empty server_name and break config parsing.
-    # Update the proxy_pass target below once the fiyavalhu-web container
-    # (and its real port) actually exists.
+    #
+    # FiyavalhuMV ships two containers behind this domain - Django
+    # (fiyavalhu-web-backend:8000, API + admin) and Next.js
+    # (fiyavalhu-web-frontend:3000, the actual UI) - so routing is by path,
+    # not a single upstream. The frontend calls the API client-side via
+    # NEXT_PUBLIC_API_URL, which must be this same domain for the /api/
+    # location below to actually be hit by the browser.
     server {
         listen 80;
         server_name ${FIYAVALHU_DOMAIN};
@@ -141,13 +147,31 @@ http {
         add_header X-Permitted-Cross-Domain-Policies "none"                             always;
         add_header Cross-Origin-Opener-Policy        "same-origin"                      always;
         add_header Cross-Origin-Resource-Policy      "same-origin"                      always;
+        add_header Content-Security-Policy           "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests" always;
 
-        location / {
-            set $fiyavalhu_upstream "http://fiyavalhu-web:8000";
-            proxy_pass         $fiyavalhu_upstream;
+        # Django API + admin - matches container_name fiyavalhu-web-backend
+        # in FiyavalhuMV's docker-compose.yml (not a bare "fiyavalhu-web",
+        # which doesn't exist and would 502 forever, not just at startup).
+        location ~ ^/(api|admin|static)/ {
+            set $fiyavalhu_backend "http://fiyavalhu-web-backend:8000";
+            proxy_pass         $fiyavalhu_backend;
             proxy_http_version 1.1;
             proxy_set_header   Connection        "";
-            proxy_set_header   Host              ${FIYAVALHU_DOMAIN};
+            proxy_set_header   Host              $host;
+            proxy_set_header   X-Real-IP         $remote_addr;
+            proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+            proxy_read_timeout 30s;
+        }
+
+        # Next.js frontend (everything else) - matches container_name
+        # fiyavalhu-web-frontend.
+        location / {
+            set $fiyavalhu_frontend "http://fiyavalhu-web-frontend:3000";
+            proxy_pass         $fiyavalhu_frontend;
+            proxy_http_version 1.1;
+            proxy_set_header   Connection        "";
+            proxy_set_header   Host              $host;
             proxy_set_header   X-Real-IP         $remote_addr;
             proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header   X-Forwarded-Proto $scheme;
@@ -237,6 +261,76 @@ http {
     #         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
     #         proxy_set_header   X-Forwarded-Proto $scheme;
     #         proxy_set_header   X-Forwarded-Host  ${DOMAIN};
+    #         proxy_read_timeout 30s;
+    #     }
+    #
+    #     location ~ /\.|\.git {
+    #         deny all;
+    #         access_log off;
+    #         log_not_found off;
+    #     }
+    # }
+
+    # ── FiyavalhuMV HTTPS ────────────────────────────────────────────────────
+    # Uncomment together with the film-calculator HTTPS block above once
+    # certs covering ${FIYAVALHU_DOMAIN} are placed in nginx/certs/ (either
+    # its own cert, or a wildcard that already covers film-calculator's
+    # domain). IMPORTANT: uncomment this block in the SAME change that
+    # uncomments the film-calculator HTTPS block above - nginx selects a
+    # server{} by listen+server_name, so if 443 is enabled for DOMAIN but not
+    # for FIYAVALHU_DOMAIN, requests to https://${FIYAVALHU_DOMAIN}/ silently
+    # fall through to film-calculator's HTTPS server instead of erroring.
+    # Certbot: sudo certbot certonly --standalone -d ${FIYAVALHU_DOMAIN}
+    # Cert path: /etc/letsencrypt/live/${FIYAVALHU_DOMAIN}/
+    #
+    # server {
+    #     listen 443 ssl http2;
+    #     server_name ${FIYAVALHU_DOMAIN};
+    #     resolver 127.0.0.11 valid=10s;
+    #
+    #     client_max_body_size 10m;
+    #
+    #     ssl_certificate     /etc/nginx/certs/fiyavalhu-fullchain.pem;
+    #     ssl_certificate_key /etc/nginx/certs/fiyavalhu-privkey.pem;
+    #
+    #     ssl_protocols             TLSv1.2 TLSv1.3;
+    #     ssl_ciphers               ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    #     ssl_prefer_server_ciphers off;
+    #     ssl_session_cache         shared:SSL:10m;
+    #     ssl_session_timeout       1d;
+    #     ssl_session_tickets       off;
+    #
+    #     add_header Strict-Transport-Security         "max-age=63072000; includeSubDomains; preload" always;
+    #     add_header X-Frame-Options                   "DENY"                             always;
+    #     add_header X-Content-Type-Options            "nosniff"                          always;
+    #     add_header Referrer-Policy                   "strict-origin-when-cross-origin"  always;
+    #     add_header Permissions-Policy                "geolocation=(), microphone=(), camera=()" always;
+    #     add_header X-Permitted-Cross-Domain-Policies "none"                             always;
+    #     add_header Cross-Origin-Opener-Policy        "same-origin"                      always;
+    #     add_header Cross-Origin-Resource-Policy      "same-origin"                      always;
+    #     add_header Content-Security-Policy           "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests" always;
+    #
+    #     location ~ ^/(api|admin|static)/ {
+    #         set $fiyavalhu_backend "http://fiyavalhu-web-backend:8000";
+    #         proxy_pass         $fiyavalhu_backend;
+    #         proxy_http_version 1.1;
+    #         proxy_set_header   Connection        "";
+    #         proxy_set_header   Host              $host;
+    #         proxy_set_header   X-Real-IP         $remote_addr;
+    #         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    #         proxy_set_header   X-Forwarded-Proto $scheme;
+    #         proxy_read_timeout 30s;
+    #     }
+    #
+    #     location / {
+    #         set $fiyavalhu_frontend "http://fiyavalhu-web-frontend:3000";
+    #         proxy_pass         $fiyavalhu_frontend;
+    #         proxy_http_version 1.1;
+    #         proxy_set_header   Connection        "";
+    #         proxy_set_header   Host              $host;
+    #         proxy_set_header   X-Real-IP         $remote_addr;
+    #         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    #         proxy_set_header   X-Forwarded-Proto $scheme;
     #         proxy_read_timeout 30s;
     #     }
     #
