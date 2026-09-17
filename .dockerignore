@@ -13,7 +13,7 @@ __pycache__
 venv/
 node_modules/
 tests/
-nginx/
+Caddyfile
 CHANGELOG.md
 reddit-post.md
 suggestions.md

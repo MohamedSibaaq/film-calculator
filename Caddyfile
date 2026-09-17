@@ -1,0 +1,89 @@
+# Per-app Caddy site block for film-calculator.
+#
+# This is NOT a standalone Caddy config — it's a snippet meant to be
+# `import`-ed by one shared Caddyfile that lives on the host, alongside
+# other apps' own snippets. That's what makes it easy to add more
+# reverse-proxied services later: each app repo ships a file like this one,
+# and the host Caddyfile just imports every app's file. Caddy handles ACME
+# (Let's Encrypt) automatically per site block, so there's no certbot step
+# and no cert volume to wire up.
+#
+# Host setup (once):
+#   1. Install Caddy on the server: https://caddyserver.com/docs/install
+#   2. Create /etc/caddy/Caddyfile with:
+#
+#        {
+#            email you@example.com
+#        }
+#
+#        import /opt/*/Caddyfile
+#
+#   3. Deploy this repo to /opt/film-calculator/ (see README) so this file
+#      lands at /opt/film-calculator/Caddyfile, matching the glob above.
+#   4. Export DOMAIN and PORT for the caddy process, e.g. in
+#      /etc/systemd/system/caddy.service.d/override.conf:
+#        [Service]
+#        EnvironmentFile=/opt/film-calculator/.env
+#   5. sudo systemctl reload caddy
+#
+# Adding another service later: drop its repo under /opt/<name>/ with its
+# own Caddyfile snippet (own domain + own reverse_proxy target port) and
+# reload Caddy — no changes needed here.
+
+{$DOMAIN} {
+    encode gzip
+
+    # Wrapped in `route` so these directives run in the literal order written
+    # below, instead of Caddy's default directive-priority ordering — which
+    # would otherwise run reverse_proxy (unmatched, so it always fires and
+    # terminates the chain) *before* the method-check `respond` below,
+    # silently defeating the GET/HEAD-only restriction.
+    route {
+        header {
+            # Security headers (OWASP A05 / NIST SP 800-53 SC-8). Flask
+            # already sets these too (defence-in-depth); keeping them here
+            # as well means they're present even for responses Caddy serves
+            # without hitting the app (e.g. its own error pages).
+            X-Frame-Options                   "DENY"
+            X-Content-Type-Options            "nosniff"
+            Referrer-Policy                   "strict-origin-when-cross-origin"
+            Permissions-Policy                "geolocation=(), microphone=(), camera=()"
+            X-Permitted-Cross-Domain-Policies "none"
+            Cross-Origin-Opener-Policy        "same-origin"
+            Cross-Origin-Resource-Policy      "same-origin"
+            Content-Security-Policy           "default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://logo.clearbit.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+            # Don't advertise the server software/version.
+            -Server
+        }
+
+        # Only GET/HEAD are needed anywhere on this site.
+        @disallowedMethod not method GET HEAD
+        respond @disallowedMethod 405
+
+        request_body {
+            max_size 16KB
+        }
+
+        @api path /api/*
+        header @api {
+            Cache-Control "no-store"
+            X-Robots-Tag  "noindex, nofollow"
+        }
+
+        # Rate-limiting /api/ (as nginx's limit_req did) needs the
+        # third-party caddy-ratelimit plugin
+        # (github.com/mholt/caddy-ratelimit), built into Caddy with xcaddy.
+        # Uncomment once that build is in place:
+        # rate_limit @api {
+        #     zone api {
+        #         key {remote_host}
+        #         events 30
+        #         window 1m
+        #     }
+        # }
+
+        reverse_proxy 127.0.0.1:{$PORT} {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+}

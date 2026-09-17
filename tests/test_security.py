@@ -23,7 +23,7 @@ class SecurityRegressionTests(unittest.TestCase):
             "/Dockerfile",
             "/docker-compose.yml",
             "/requirements.txt",
-            "/nginx/nginx.conf.template",
+            "/Caddyfile",
             "/assets/../app.py",
         )
         for path in blocked_paths:

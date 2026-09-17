@@ -51,7 +51,7 @@ film_formats:
 docker compose up --build
 ```
 
-Open `http://localhost` — nginx proxies to Flask on the internal network; port 5000 is never exposed to the host.
+Open `http://localhost:5000` — the container is bound to loopback only (`127.0.0.1:5000`) and is meant to sit behind a reverse proxy (see [Cloud deployment](#cloud-deployment)); it's never exposed on a public interface directly.
 
 Edit `config.yaml` and refresh; the volume mount means no rebuild is needed.
 
@@ -60,28 +60,30 @@ Edit `config.yaml` and refresh; the volume mount means no rebuild is needed.
 The stack includes a practical hardening baseline aligned to common controls from:
 - NIST SP 800-53 (secure transport and boundary protection)
 - OWASP ASVS / Top 10 (secure headers, input/request constraints, least privilege)
-- CIS Docker and CIS NGINX guidance (container isolation and safer defaults)
+- CIS Docker guidance (container isolation and safer defaults)
 
 Implemented controls in this repository:
-- Strict security headers at both Flask and nginx layers (defence-in-depth), including CSP, HSTS (HTTPS mode), COOP, CORP, and anti-MIME sniffing.
-- API abuse controls with nginx rate limiting plus `GET`/`HEAD` method allowlisting.
-- Request size and timeout limits to reduce DoS/resource-exhaustion exposure.
+- Strict security headers set by Flask directly (CSP, COOP, CORP, anti-MIME sniffing), applied a second time at the Caddy edge (defence-in-depth) — see [`Caddyfile`](Caddyfile).
+- `GET`/`HEAD` method allowlisting and a small request body cap enforced both in Flask and at the Caddy edge.
 - Reverse-proxy trust controls in Flask (`ProxyFix`) and explicit forwarded headers.
 - Container least privilege: non-root app user, dropped Linux capabilities, and `no-new-privileges`.
 - Read-only root filesystem for the Flask container with writable `tmpfs` only.
+- The app container is bound to `127.0.0.1` only — reachable exclusively through the host's Caddy reverse proxy, never directly from the network.
 
 Quick verification commands:
 
 ```bash
 docker compose config
 docker compose up -d --build
-curl -I http://localhost
-curl -I http://localhost/api/config
+curl -I http://localhost:5000
+curl -I http://localhost:5000/api/config
 ```
 
 For HTTPS deployments, verify TLS and headers externally with SSL Labs and Mozilla Observatory.
 
 ## Cloud deployment
+
+This app is designed to sit behind **Caddy running directly on the host** (not in a container), so one Caddy instance can reverse-proxy this app plus any number of other services, each with automatic HTTPS and no manual certificate handling.
 
 ### 1 — Copy files to your server
 
@@ -97,63 +99,52 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 ```
 
-### 3 — Deploy
+### 3 — Start the app container
 
 ```bash
 ssh user@<ip-address>
 cd /opt/film-calculator
+cp .env.example .env   # set DOMAIN and PORT
 docker compose up -d --build
 ```
 
+This publishes the app on `127.0.0.1:${PORT}` only — nothing is reachable from outside the host until Caddy is set up below.
+
+### 4 — Install and configure Caddy on the host
+
+Install Caddy: <https://caddyserver.com/docs/install>
+
+Create `/etc/caddy/Caddyfile` on the host:
+
+```caddyfile
+{
+    email you@example.com
+}
+
+import /opt/*/Caddyfile
+```
+
+This app ships its own site block at [`Caddyfile`](Caddyfile), which the glob above picks up automatically once the repo is deployed to `/opt/film-calculator/`. It reverse-proxies `${DOMAIN}` to `127.0.0.1:${PORT}` and reapplies the same security headers as Flask.
+
+Caddy reads `DOMAIN` and `PORT` from its process environment, so point its systemd unit at this app's `.env`:
+
+```bash
+sudo mkdir -p /etc/systemd/system/caddy.service.d
+sudo tee /etc/systemd/system/caddy.service.d/override.conf <<'EOF'
+[Service]
+EnvironmentFile=/opt/film-calculator/.env
+EOF
+sudo systemctl daemon-reload
+sudo systemctl reload caddy
+```
+
+Caddy automatically obtains and renews a Let's Encrypt certificate for `${DOMAIN}` the first time it starts serving that site — no certbot, no cert volumes, no renewal cron job.
+
 The app is now live at `https://filmcalculator.tahlil.solutions/`.
 
----
+### 5 — Adding another service later
 
-### 4 — Add a domain + HTTPS (Let's Encrypt)
-
-**Get a certificate** (run once on the host — stop nginx first so port 80 is free):
-
-```bash
-docker compose stop nginx
-sudo apt install certbot          # or: snap install --classic certbot
-sudo certbot certonly --standalone -d 'your-website-url'
-docker compose start nginx
-```
-
-Certbot writes certs to `/etc/letsencrypt/live/your-website-url/`.
-
-**Wire the certs into nginx:**
-
-Create `nginx/certs/` and symlink (or copy) the files:
-
-```bash
-mkdir -p nginx/certs
-sudo ln -sf /etc/letsencrypt/live/your-website-url/fullchain.pem  nginx/certs/fullchain.pem
-sudo ln -sf /etc/letsencrypt/live/your-website-url/privkey.pem    nginx/certs/privkey.pem
-```
-
-**Edit [`nginx/nginx.conf`](nginx/nginx.conf):**
-
-1. In the `server` block on port 80, replace the two `location` blocks with:
-   ```nginx
-   return 301 https://$host$request_uri;
-   ```
-2. Uncomment the entire `# ── HTTPS ──` server block — `${DOMAIN}` is already set; it will be substituted from `.env` at startup
-
-**Uncomment the certs volume** in [`docker-compose.yml`](docker-compose.yml):
-```yaml
-      - ./nginx/certs:/etc/nginx/certs:ro
-```
-
-**Redeploy:**
-```bash
-docker compose up -d --force-recreate nginx
-```
-
-**Auto-renew** (add to root crontab):
-```
-0 3 * * * certbot renew --quiet && docker compose -f /opt/film-calculator/docker-compose.yml restart nginx
-```
+Deploy the other app to its own directory under `/opt/`, e.g. `/opt/fiyavalhu-web/`, with its own `Caddyfile` snippet (its own domain and its own `reverse_proxy` target). The `import /opt/*/Caddyfile` line already picks it up — just `sudo systemctl reload caddy` after deploying it. No changes are needed to this repo or to the shared host Caddyfile.
 
 ## Roadmap
 

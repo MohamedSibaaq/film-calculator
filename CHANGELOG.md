@@ -6,6 +6,10 @@ The format is inspired by Keep a Changelog and this project follows semantic-sty
 
 ## [Unreleased]
 
+### Changed
+- Replaced the dockerized nginx reverse proxy with host-level Caddy. `docker-compose.yml` now only runs the Flask app, bound to `127.0.0.1:${PORT}`; a new [`Caddyfile`](Caddyfile) ships as an importable snippet for a shared Caddyfile on the host, so other services can be reverse-proxied the same way without touching this repo. Caddy also handles HTTPS automatically (no certbot step).
+- Removed the FiyavalhuMV nginx server-block workaround; that routing now belongs entirely to the host's shared Caddyfile via its own app-specific snippet.
+
 ### Security
 - Hardened Flask response headers with CSP, COOP, and CORP defaults for direct app traffic and defence-in-depth behind nginx.
 - Added trusted reverse-proxy handling (`ProxyFix`) and capped request body size to reduce header spoofing and oversized request risk.

@@ -185,10 +185,10 @@ jobs:
       - name: Start Docker Compose deployment
         run: docker compose up --build --detach
 
-      - name: Wait for nginx endpoint
+      - name: Wait for app endpoint
         run: |
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error http://localhost/ > /tmp/film-calculator.html; then
+            if curl --fail --silent --show-error http://localhost:5000/ > /tmp/film-calculator.html; then
               exit 0
             fi
             sleep 2
@@ -199,7 +199,7 @@ jobs:
 
       - name: Validate deployed HTTP security headers
         run: |
-          curl --fail --silent --show-error --head http://localhost/ | tee /tmp/headers.txt
+          curl --fail --silent --show-error --head http://localhost:5000/ | tee /tmp/headers.txt
           grep -qi '^X-Frame-Options: DENY' /tmp/headers.txt
           grep -qi '^X-Content-Type-Options: nosniff' /tmp/headers.txt
           grep -qi '^Referrer-Policy: strict-origin-when-cross-origin' /tmp/headers.txt
@@ -208,7 +208,7 @@ jobs:
 
       - name: Validate deployed API response
         run: |
-          curl --fail --silent --show-error http://localhost/api/config | python -m json.tool > /tmp/config.json
+          curl --fail --silent --show-error http://localhost:5000/api/config | python -m json.tool > /tmp/config.json
           python - <<'PY'
           import json
           from pathlib import Path
