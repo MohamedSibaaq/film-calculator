@@ -8,8 +8,17 @@
 # (Let's Encrypt) automatically per site block, so there's no certbot step
 # and no cert volume to wire up.
 #
+# This snippet's rate_limit directive needs Caddy built with the
+# third-party caddy-ratelimit module (github.com/mholt/caddy-ratelimit) —
+# deploy.sh fetches such a build automatically via Caddy's own build API
+# (https://caddyserver.com/api/download), so a plain `apt install caddy`
+# is not enough on its own if you're wiring this up by hand.
+#
 # Host setup (once):
 #   1. Install Caddy on the server: https://caddyserver.com/docs/install
+#      — then swap the binary for a build that includes caddy-ratelimit:
+#        curl -o /usr/bin/caddy 'https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com/mholt/caddy-ratelimit'
+#        chmod 755 /usr/bin/caddy && systemctl restart caddy
 #   2. Create /etc/caddy/Caddyfile with:
 #
 #        {
@@ -60,7 +69,15 @@
             X-Permitted-Cross-Domain-Policies "none"
             Cross-Origin-Opener-Policy        "same-origin"
             Cross-Origin-Resource-Policy      "same-origin"
-            Content-Security-Policy           "default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://logo.clearbit.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+            # No 'unsafe-inline': all JS/CSS live in assets/app.js and
+            # assets/styles.css (same-origin, covered by 'self').
+            Content-Security-Policy           "default-src 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self' data: https://logo.clearbit.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+            # Automatic HTTPS doesn't imply HSTS — Caddy never sets this on
+            # its own. No `preload`: that's a near-permanent opt-in to
+            # browsers' hardcoded preload list, worth doing deliberately at
+            # https://hstspreload.org once this domain is confirmed
+            # HTTPS-only for good, not baked in unilaterally here.
+            Strict-Transport-Security         "max-age=63072000; includeSubDomains"
             # Don't advertise the server software/version.
             -Server
         }
@@ -79,17 +96,16 @@
             X-Robots-Tag  "noindex, nofollow"
         }
 
-        # Rate-limiting /api/ (as nginx's limit_req did) needs the
-        # third-party caddy-ratelimit plugin
-        # (github.com/mholt/caddy-ratelimit), built into Caddy with xcaddy.
-        # Uncomment once that build is in place:
-        # rate_limit @api {
-        #     zone api {
-        #         key {remote_host}
-        #         events 30
-        #         window 1m
-        #     }
-        # }
+        # Rate-limit /api/ the way nginx's limit_req did (30 req/min per
+        # IP). Requires the caddy-ratelimit module — see the file header
+        # comment above; deploy.sh fetches a build with it included.
+        rate_limit @api {
+            zone api {
+                key {remote_host}
+                events 30
+                window 1m
+            }
+        }
 
         reverse_proxy 127.0.0.1:{$FILM_CALCULATOR_PORT} {
             header_up X-Real-IP {remote_host}

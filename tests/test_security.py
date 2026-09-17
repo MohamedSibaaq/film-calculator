@@ -8,7 +8,15 @@ class SecurityRegressionTests(unittest.TestCase):
         self.client = app.test_client()
 
     def test_public_pages_still_load(self):
-        for path in ("/", "/privacy.html", "/README.md", "/robots.txt", "/sitemap.xml"):
+        for path in (
+            "/",
+            "/privacy.html",
+            "/README.md",
+            "/robots.txt",
+            "/sitemap.xml",
+            "/assets/app.js",
+            "/assets/styles.css",
+        ):
             with self.subTest(path=path):
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
@@ -53,6 +61,22 @@ class SecurityRegressionTests(unittest.TestCase):
         self.assertEqual(response.headers["Referrer-Policy"], "strict-origin-when-cross-origin")
         self.assertIn("script-src-attr 'none'", response.headers["Content-Security-Policy"])
         self.assertIn("frame-ancestors 'none'", response.headers["Content-Security-Policy"])
+
+    def test_csp_does_not_need_unsafe_inline(self):
+        # JS/CSS ship as same-origin files (assets/app.js, assets/styles.css),
+        # not inline, so the CSP shouldn't have to weaken itself for them.
+        csp = self.client.get("/").headers["Content-Security-Policy"]
+        self.assertNotIn("unsafe-inline", csp)
+
+    def test_hsts_header_is_applied(self):
+        response = self.client.get("/")
+        self.assertIn("max-age=", response.headers["Strict-Transport-Security"])
+
+    def test_disallowed_methods_are_rejected(self):
+        for path in ("/", "/api/config"):
+            with self.subTest(path=path):
+                response = self.client.options(path)
+                self.assertEqual(response.status_code, 405)
 
 
 if __name__ == "__main__":

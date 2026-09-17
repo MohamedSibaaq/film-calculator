@@ -99,7 +99,29 @@ if ! command -v caddy >/dev/null 2>&1; then
     apt-get update -qq
     apt-get install -y -qq caddy
 else
-    log "Caddy already installed, skipping."
+    log "Caddy already installed, skipping package install."
+fi
+
+# The stock apt package has no third-party modules. This Caddyfile's
+# rate_limit directive needs caddy-ratelimit, so fetch a custom static
+# build via Caddy's own build API and swap it into the package-managed
+# binary path — this keeps apt's systemd unit, dedicated user, and
+# CAP_NET_BIND_SERVICE grant intact; only the executable itself changes.
+CADDY_BIN="$(command -v caddy)"
+if "$CADDY_BIN" list-modules 2>/dev/null | grep -q '^http.handlers.rate_limit'; then
+    log "Caddy binary already has the rate_limit module, skipping rebuild."
+else
+    log "Fetching a Caddy build with the caddy-ratelimit module (this can take a minute)..."
+    CADDY_ARCH="$(dpkg --print-architecture)"   # amd64/arm64 — matches Caddy's arch= param
+    TMP_CADDY="$(mktemp)"
+    curl --fail --silent --show-error -o "$TMP_CADDY" \
+        "https://caddyserver.com/api/download?os=linux&arch=${CADDY_ARCH}&p=github.com/mholt/caddy-ratelimit" \
+        || { rm -f "$TMP_CADDY"; die "Failed to download the custom Caddy build."; }
+    chmod 755 "$TMP_CADDY"
+    "$TMP_CADDY" version >/dev/null 2>&1 \
+        || { rm -f "$TMP_CADDY"; die "Downloaded Caddy binary won't run — not replacing $CADDY_BIN."; }
+    mv "$TMP_CADDY" "$CADDY_BIN"
+    log "Installed custom Caddy build with rate_limit support at $CADDY_BIN."
 fi
 
 # ── Firewall ──────────────────────────────────────────────────────────────
@@ -167,6 +189,9 @@ cat > "$OVERRIDE_FILE" <<EOF
 Environment=FILM_CALCULATOR_DOMAIN=$DOMAIN
 Environment=FILM_CALCULATOR_PORT=$PORT
 EOF
+# Not secret today (just DOMAIN/PORT), but root-only by default anyway —
+# so this stays safe if a future app copies the pattern for real secrets.
+chmod 600 "$OVERRIDE_FILE"
 systemctl daemon-reload
 
 log "Validating Caddy config..."

@@ -9,8 +9,17 @@ The format is inspired by Keep a Changelog and this project follows semantic-sty
 ### Changed
 - Replaced the dockerized nginx reverse proxy with host-level Caddy. `docker-compose.yml` now only runs the Flask app, bound to `127.0.0.1:${PORT}`; a new [`Caddyfile`](Caddyfile) ships as an importable snippet for a shared Caddyfile on the host, so other services can be reverse-proxied the same way without touching this repo. Caddy also handles HTTPS automatically (no certbot step).
 - Removed the FiyavalhuMV nginx server-block workaround; that routing now belongs entirely to the host's shared Caddyfile via its own app-specific snippet.
+- Extracted `index.html`'s inline `<style>`/`<script>` blocks to `assets/styles.css`/`assets/app.js`, and removed the last few inline `style="..."` attributes in favor of default CSS classes toggled from JS.
 
 ### Security
+- Closed a full security-audit pass on the Caddy migration:
+  - `/api/` is now actually rate-limited (30 req/min/IP) via the `caddy-ratelimit` module — the nginx-era limit had no working equivalent right after the migration; `deploy.sh` now fetches a Caddy build with the module included.
+  - Added a proper `Strict-Transport-Security` header (Flask and Caddy both), since Caddy's automatic HTTPS never implied HSTS on its own.
+  - CSP no longer needs `unsafe-inline` for `script-src`/`style-src` now that all JS/CSS is same-origin, out of `index.html`.
+  - `GET`/`HEAD`-only is now enforced in Flask itself, not just at the Caddy edge.
+  - Dev-only CORS origin now derives from `PORT` instead of a hardcoded `:5000`.
+  - `Dockerfile` base image pinned by digest, not just the `3.13-slim` tag.
+  - The Caddy systemd env override file is now `chmod 600`.
 - Hardened Flask response headers with CSP, COOP, and CORP defaults for direct app traffic and defence-in-depth behind nginx.
 - Added trusted reverse-proxy handling (`ProxyFix`) and capped request body size to reduce header spoofing and oversized request risk.
 - Tightened nginx request handling with method allowlisting (`GET`/`HEAD` only), small body limits, and shorter client/send timeouts.

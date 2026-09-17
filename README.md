@@ -63,12 +63,14 @@ The stack includes a practical hardening baseline aligned to common controls fro
 - CIS Docker guidance (container isolation and safer defaults)
 
 Implemented controls in this repository:
-- Strict security headers set by Flask directly (CSP, COOP, CORP, anti-MIME sniffing), applied a second time at the Caddy edge (defence-in-depth) — see [`Caddyfile`](Caddyfile).
-- `GET`/`HEAD` method allowlisting and a small request body cap enforced both in Flask and at the Caddy edge.
+- Strict security headers set by Flask directly (CSP with no `unsafe-inline`, HSTS, COOP, CORP, anti-MIME sniffing), applied a second time at the Caddy edge (defence-in-depth) — see [`Caddyfile`](Caddyfile). All JS/CSS ships as same-origin files (`assets/app.js`, `assets/styles.css`), not inline, so the CSP doesn't need to weaken itself to allow them.
+- `GET`/`HEAD` method allowlisting enforced at both the Flask and Caddy layers (not just one), and a small request body cap (16KB) enforced at both.
+- `/api/` is rate-limited to 30 req/min per IP at the Caddy edge via the [`caddy-ratelimit`](https://github.com/mholt/caddy-ratelimit) module — `deploy.sh` fetches a Caddy build with it included automatically.
 - Reverse-proxy trust controls in Flask (`ProxyFix`) and explicit forwarded headers.
 - Container least privilege: non-root app user, dropped Linux capabilities, and `no-new-privileges`.
 - Read-only root filesystem for the Flask container with writable `tmpfs` only.
 - The app container is bound to `127.0.0.1` only — reachable exclusively through the host's Caddy reverse proxy, never directly from the network.
+- Base image pinned by digest, not just a floating tag — see [`Dockerfile`](Dockerfile).
 
 Quick verification commands:
 
@@ -152,6 +154,7 @@ sudo tee /etc/systemd/system/caddy.service.d/film-calculator.conf <<EOF
 Environment=FILM_CALCULATOR_DOMAIN=$DOMAIN
 Environment=FILM_CALCULATOR_PORT=$PORT
 EOF
+sudo chmod 600 /etc/systemd/system/caddy.service.d/film-calculator.conf
 sudo systemctl daemon-reload
 # restart, not reload: Caddy only picks up new/changed environment
 # variables for a freshly started process, not on a config reload.

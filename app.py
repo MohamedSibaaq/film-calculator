@@ -34,10 +34,17 @@ _PUBLIC_DIRECTORIES = frozenset({"assets"})
 # Origins permitted to make cross-origin requests to /api/.
 # OWASP A01: Broken Access Control — reject unknown origins.
 _DOMAIN = os.environ.get("DOMAIN", "localhost")
+_PORT = os.environ.get("PORT", "5000")
 _ALLOWED_ORIGINS = {
     f"https://{_DOMAIN}",
     f"http://{_DOMAIN}",
-    "http://localhost:5000",   # local development only
+    # Local development, hitting the container directly instead of through
+    # the reverse proxy. Derived from PORT (not a hardcoded ":5000") so it
+    # can't go stale. Safe to leave allowlisted unconditionally in
+    # production too: a browser sets the Origin header truthfully from the
+    # page's real origin, so an attacker's script cannot forge this value
+    # to spoof a request as coming from localhost.
+    f"http://localhost:{_PORT}",
 }
 
 
@@ -60,12 +67,19 @@ def set_security_headers(response):
     response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
     response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
     response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    # Browsers only honour this over an actual HTTPS connection, so it's a
+    # no-op for local HTTP development and safe to set unconditionally.
+    response.headers.setdefault(
+        "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+    )
     response.headers.setdefault(
         "Content-Security-Policy",
+        # No 'unsafe-inline': all JS/CSS live in assets/app.js and
+        # assets/styles.css (same-origin, covered by 'self'), not inline.
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
         "script-src-attr 'none'; "
-        "style-src 'self' 'unsafe-inline'; "
+        "style-src 'self'; "
         "img-src 'self' data: https://logo.clearbit.com; "
         "font-src 'self'; "
         "connect-src 'self'; "
@@ -87,7 +101,7 @@ def set_security_headers(response):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@app.route("/api/config")
+@app.route("/api/config", methods=["GET", "HEAD"], provide_automatic_options=False)
 def get_config():
     """Return only the allowlisted subset of config.yaml as JSON.
 
@@ -127,13 +141,13 @@ def get_config():
     if origin in _ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
-    response.headers["Access-Control-Allow-Methods"] = "GET"
+    response.headers["Access-Control-Allow-Methods"] = "GET, HEAD"
 
     return response
 
 
-@app.route("/", defaults={"path": "index.html"})
-@app.route("/<path:path>")
+@app.route("/", defaults={"path": "index.html"}, methods=["GET", "HEAD"], provide_automatic_options=False)
+@app.route("/<path:path>", methods=["GET", "HEAD"], provide_automatic_options=False)
 def static_files(path):
     """Serve static files from the project root.
 
