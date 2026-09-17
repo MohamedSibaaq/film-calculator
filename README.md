@@ -138,21 +138,27 @@ Create `/etc/caddy/Caddyfile` on the host:
 import /opt/*/Caddyfile
 ```
 
-This app ships its own site block at [`Caddyfile`](Caddyfile), which the glob above picks up automatically once the repo is deployed to `/opt/film-calculator/`. It reverse-proxies `${DOMAIN}` to `127.0.0.1:${PORT}` and reapplies the same security headers as Flask.
+This app ships its own site block at [`Caddyfile`](Caddyfile), which the glob above picks up automatically once the repo is deployed to `/opt/film-calculator/`. It reverse-proxies `${FILM_CALCULATOR_DOMAIN}` to `127.0.0.1:${FILM_CALCULATOR_PORT}` and reapplies the same security headers as Flask.
 
-Caddy reads `DOMAIN` and `PORT` from its process environment, so point its systemd unit at this app's `.env`:
+Caddy reads `FILM_CALCULATOR_DOMAIN`/`FILM_CALCULATOR_PORT` (not generic `DOMAIN`/`PORT`) from its process environment. That prefix matters: every drop-in file under `caddy.service.d/` merges into **one shared environment for the single Caddy service** — if a second app's override also defined plain `DOMAIN`/`PORT`, whichever file sorts last would silently clobber the other app's values. Give every app its own override with its own prefixed names, values baked in literally:
 
 ```bash
+cd /opt/film-calculator
+set -a; source .env; set +a   # loads DOMAIN and PORT into this shell
+
 sudo mkdir -p /etc/systemd/system/caddy.service.d
-sudo tee /etc/systemd/system/caddy.service.d/override.conf <<'EOF'
+sudo tee /etc/systemd/system/caddy.service.d/film-calculator.conf <<EOF
 [Service]
-EnvironmentFile=/opt/film-calculator/.env
+Environment=FILM_CALCULATOR_DOMAIN=$DOMAIN
+Environment=FILM_CALCULATOR_PORT=$PORT
 EOF
 sudo systemctl daemon-reload
-sudo systemctl reload caddy
+# restart, not reload: Caddy only picks up new/changed environment
+# variables for a freshly started process, not on a config reload.
+sudo systemctl restart caddy
 ```
 
-Caddy automatically obtains and renews a Let's Encrypt certificate for `${DOMAIN}` the first time it starts serving that site — no certbot, no cert volumes, no renewal cron job.
+Caddy automatically obtains and renews a Let's Encrypt certificate for `${FILM_CALCULATOR_DOMAIN}` (i.e. your app's `DOMAIN`) the first time it starts serving that site — no certbot, no cert volumes, no renewal cron job.
 
 The app is now live at `https://filmcalculator.tahlil.solutions/`.
 

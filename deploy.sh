@@ -49,6 +49,24 @@ fi
 
 log "Deploying film-calculator for DOMAIN=$DOMAIN PORT=$PORT"
 
+# The Caddyfile's `import /opt/*/Caddyfile` glob (below) only ever picks up
+# an app whose repo lives directly under /opt/<name>/. Deploying anywhere
+# else means this app's Caddyfile snippet silently never gets imported.
+case "$SCRIPT_DIR" in
+    /opt/*/*) die "Unexpected nesting: $SCRIPT_DIR is more than one level under /opt — the /opt/*/Caddyfile import glob won't match it." ;;
+    /opt/*) ;;
+    *) warn "$SCRIPT_DIR is not directly under /opt/ — the host Caddyfile's 'import /opt/*/Caddyfile' glob won't pick up this app's Caddyfile. Deploy to /opt/film-calculator/ or adjust the import glob in $CADDYFILE." ;;
+esac
+
+# ── Base tools ────────────────────────────────────────────────────────────
+# Needed below regardless of whether Docker/Caddy are already installed
+# (e.g. a minimal cloud image with Docker preinstalled but no curl).
+
+if ! command -v curl >/dev/null 2>&1; then
+    apt-get update -qq
+    apt-get install -y -qq curl
+fi
+
 # ── Docker ────────────────────────────────────────────────────────────────
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -73,7 +91,7 @@ fi
 
 if ! command -v caddy >/dev/null 2>&1; then
     log "Caddy not found — installing from Caddy's official apt repo..."
-    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl
+    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl gnupg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
         | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
@@ -132,24 +150,35 @@ else
     printf '\n%s\n' "$IMPORT_LINE" >> "$CADDYFILE"
 fi
 
-# ── Caddy environment (DOMAIN / PORT for this app's Caddyfile snippet) ─────
+# ── Caddy environment (app-prefixed, not generic DOMAIN/PORT) ──────────────
+#
+# Every drop-in file under caddy.service.d/ contributes to ONE shared
+# process environment for the single Caddy service. Using generic DOMAIN/
+# PORT names here would let a second app's override silently clobber this
+# app's values (whichever conf file sorts last wins). Values are baked in
+# literally (not via EnvironmentFile) so each app's override is self-
+# contained and independent of any other app's .env layout.
 
 mkdir -p "$CADDY_OVERRIDE_DIR"
 OVERRIDE_FILE="$CADDY_OVERRIDE_DIR/film-calculator.conf"
 log "Writing systemd env override for Caddy at $OVERRIDE_FILE..."
 cat > "$OVERRIDE_FILE" <<EOF
 [Service]
-EnvironmentFile=$SCRIPT_DIR/.env
+Environment=FILM_CALCULATOR_DOMAIN=$DOMAIN
+Environment=FILM_CALCULATOR_PORT=$PORT
 EOF
 systemctl daemon-reload
 
 log "Validating Caddy config..."
-caddy validate --config "$CADDYFILE" --adapter caddyfile \
+FILM_CALCULATOR_DOMAIN="$DOMAIN" FILM_CALCULATOR_PORT="$PORT" \
+    caddy validate --config "$CADDYFILE" --adapter caddyfile \
     || die "Caddy config validation failed — check $CADDYFILE and $SCRIPT_DIR/Caddyfile."
 
-log "Reloading Caddy..."
-systemctl enable --now caddy
-systemctl reload caddy
+log "Restarting Caddy..."
+systemctl enable caddy
+# restart, not reload: a graceful config reload does not pick up new or
+# changed environment variables on an already-running process.
+systemctl restart caddy
 
 log "Deployment complete. https://${DOMAIN}/ should be live once DNS points at this server"
 log "(Caddy obtains its Let's Encrypt certificate automatically on first request)."

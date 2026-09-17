@@ -20,17 +20,26 @@
 #
 #   3. Deploy this repo to /opt/film-calculator/ (see README) so this file
 #      lands at /opt/film-calculator/Caddyfile, matching the glob above.
-#   4. Export DOMAIN and PORT for the caddy process, e.g. in
-#      /etc/systemd/system/caddy.service.d/override.conf:
+#   4. Export FILM_CALCULATOR_DOMAIN and FILM_CALCULATOR_PORT for the caddy
+#      process, e.g. in /etc/systemd/system/caddy.service.d/film-calculator.conf:
 #        [Service]
-#        EnvironmentFile=/opt/film-calculator/.env
-#   5. sudo systemctl reload caddy
+#        Environment=FILM_CALCULATOR_DOMAIN=yourdomain.com
+#        Environment=FILM_CALCULATOR_PORT=5000
+#      Deliberately app-prefixed, not a generic DOMAIN/PORT: every drop-in
+#      file under caddy.service.d/ contributes to ONE shared process
+#      environment for the single Caddy service, so a second app reusing
+#      generic names would silently clobber this app's values (whichever
+#      drop-in file sorts last wins). Give every app its own prefixed names.
+#   5. sudo systemctl daemon-reload && sudo systemctl restart caddy
+#      (restart, not reload — Caddy only picks up new/changed environment
+#      variables for a freshly started process, not on a config reload)
 #
 # Adding another service later: drop its repo under /opt/<name>/ with its
-# own Caddyfile snippet (own domain + own reverse_proxy target port) and
-# reload Caddy — no changes needed here.
+# own Caddyfile snippet (own domain, own reverse_proxy target port, and its
+# own uniquely-prefixed env var names) and restart Caddy — no changes
+# needed here.
 
-{$DOMAIN} {
+{$FILM_CALCULATOR_DOMAIN} {
     encode gzip
 
     # Wrapped in `route` so these directives run in the literal order written
@@ -82,7 +91,7 @@
         #     }
         # }
 
-        reverse_proxy 127.0.0.1:{$PORT} {
+        reverse_proxy 127.0.0.1:{$FILM_CALCULATOR_PORT} {
             header_up X-Real-IP {remote_host}
         }
     }
