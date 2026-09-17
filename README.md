@@ -85,6 +85,20 @@ For HTTPS deployments, verify TLS and headers externally with SSL Labs and Mozil
 
 This app is designed to sit behind **Caddy running directly on the host** (not in a container), so one Caddy instance can reverse-proxy this app plus any number of other services, each with automatic HTTPS and no manual certificate handling.
 
+### Automated (Ubuntu)
+
+[`deploy.sh`](deploy.sh) does steps 1–4 below for you on a fresh Ubuntu server: installs Docker and Caddy if missing, starts the app container, and wires this repo's [`Caddyfile`](Caddyfile) into `/etc/caddy/Caddyfile`. It's idempotent — safe to re-run after `git pull` to redeploy.
+
+```bash
+rsync -av --exclude='.git' ./ user@<ip-address>:/opt/film-calculator/
+ssh user@<ip-address>
+cd /opt/film-calculator
+sudo ./deploy.sh          # first run creates .env from .env.example and exits — edit DOMAIN
+sudo ./deploy.sh          # second run does the actual deployment
+```
+
+The steps below are what the script automates, kept here as reference and for manual/non-Ubuntu setups.
+
 ### 1 — Copy files to your server
 
 ```bash

@@ -14,6 +14,7 @@ venv/
 node_modules/
 tests/
 Caddyfile
+deploy.sh
 CHANGELOG.md
 reddit-post.md
 suggestions.md
